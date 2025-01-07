@@ -1,0 +1,34 @@
+{
+  "short_name": "ChatMorph",
+  "name": "ChatMorph",
+  "description": "Connect with top AI models and explore endless possibilities. Ask, share, or chat with AI personalities tailored to your needs.",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#4A4A4A",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "author": "Mohammad Inteshar Alam",
+  "developer": {
+    "name": "Mohammad Inteshar Alam",
+    "email": "mrxiwlev@gmail.com"
+  },
+  "organization": {
+    "name": "SoftFlare Solutions",
+    "url": "https://inteshar.vercel.app"
+  },
+  "version": "1.0.0"
+}
