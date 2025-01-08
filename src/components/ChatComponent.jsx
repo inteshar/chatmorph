@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
+import { gptResponse } from "../services/gptService"; // Import the GPT service
 import DOMPurify from "dompurify";
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
 import GeminiLogo from "../assets/geminiLogo.svg";
+import GptLogo from "../assets/openaiLogo.svg"; // Add GPT Logo
 
 const ChatComponent = () => {
   const [userMessage, setUserMessage] = useState("");
@@ -57,6 +59,8 @@ const ChatComponent = () => {
         response = await getMistralResponse(newUserMessage);
       } else if (modelType === "gemini") {
         response = await getGeminiResponse(newUserMessage);
+      } else if (modelType === "gpt") {
+        response = await gptResponse(newUserMessage); // Handle GPT response
       }
 
       setMessages((prev) => [
@@ -96,12 +100,11 @@ const ChatComponent = () => {
 
   useEffect(() => {
     if (!isLoading && inputRef.current) {
-      inputRef.current.focus(); // Focus the input when typing is done
+      inputRef.current.focus();
     }
-  }, [isLoading]); // Trigger when isLoading state changes
+  }, [isLoading]);
 
   const renderMessageContent = (content, isAi) => {
-    // Check if the content is HTML
     if (content.startsWith("<") && content.endsWith(">")) {
       return (
         <div className="rounded-lg overflow-x-auto">
@@ -112,7 +115,6 @@ const ChatComponent = () => {
       );
     }
 
-    // Render plain text content in a bash-like format
     return (
       <pre
         className={`whitespace-pre-wrap break-words ${
@@ -121,7 +123,7 @@ const ChatComponent = () => {
             : "bg-gray-300 text-black rounded-lg shadow-md p-4"
         }`}
         style={{
-          fontFamily: "Cantarell, serif", // Monospace for bash-like feel
+          fontFamily: "Cantarell, serif",
         }}
       >
         {content}
@@ -136,8 +138,6 @@ const ChatComponent = () => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         handleSubmit(event);
-      } else if (event.key === "Enter" && event.shiftKey) {
-        return;
       }
     }
   };
@@ -155,7 +155,7 @@ const ChatComponent = () => {
           <h1 className="sm:text-5xl text-2xl font-bold tracking-wide text-black">
             ChatMorph
           </h1>
-          <h2 className="text-xs sm:text-lg md:text-base font-semibold text-gray-200 mt-2">
+          <h2 className="text-xs sm:text-lg md:text-base font-semibold text-gray-600 mt-2">
             Connect with top AI models and explore endless possibilities. Ask,
             share, or chat with AI personalities tailored to your needs.
           </h2>
@@ -177,9 +177,9 @@ const ChatComponent = () => {
                   : "items-start text-left"
               }`}
             >
-              {/* Title Bar */}
+              {/* Chat Title */}
               <div
-                className={`w-max px-3 py-1 rounded-full text-sm ${
+                className={`flex items-center justify-center w-10 h-10 px-3 py-1 rounded-full text-sm ${
                   message.type === "user"
                     ? "bg-gray-700 text-white"
                     : "bg-white text-white"
@@ -188,13 +188,15 @@ const ChatComponent = () => {
                 {message.type === "user" ? (
                   "Me"
                 ) : message.model === "gemini" ? (
-                  <img src={GeminiLogo} className="w-6 h-6" alt="" />
+                  <img src={GeminiLogo} className="w-10 h-10" alt="" />
+                ) : message.model === "gpt" ? (
+                  <img src={GptLogo} className="w-10 h-10" alt="" />
                 ) : (
-                  <img src={MistralLogo} className="w-6 h-6" alt="" />
+                  <img src={MistralLogo} className="w-10 h-10" alt="" />
                 )}
               </div>
 
-              {/* Chat Bubble */}
+              {/* Chat Message Bubble */}
               <div
                 className={`text-sm max-w-full rounded-lg ${
                   message.type === "user"
@@ -215,7 +217,7 @@ const ChatComponent = () => {
           ))
         ) : (
           <div className="flex justify-center items-center h-full w-full">
-            <p>
+            <p className="text-gray-600 text-lg">
               Welcome! Choose a model to begin your conversation with ChatMorph
               and explore the possibilities.
             </p>
@@ -225,10 +227,9 @@ const ChatComponent = () => {
 
       {/* Input Section */}
       <form
-        className="my-4 mx-4 p-2 bg-gray-800 rounded-lg sm:rounded-full grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] items-center"
+        className="h-max my-4 mx-4 p-2 bg-gray-800 rounded-lg sm:rounded-full grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] items-center"
         onSubmit={handleSubmit}
       >
-        {/* AI Model Select */}
         <div className="sm:w-24 flex items-center justify-center bg-gray-900 sm:rounded-full rounded-lg">
           <select
             value={modelType}
@@ -241,22 +242,23 @@ const ChatComponent = () => {
             <option value="gemini" className="bg-gray-800">
               Gemini
             </option>
+            <option value="gpt" className="bg-gray-800">
+              GPT
+            </option>
           </select>
         </div>
 
-        {/* Expanded input field */}
         <textarea
           ref={inputRef}
           value={userMessage}
           onChange={(e) => setUserMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
-          className="px-4 py-3 bg-transparent text-gray-300 placeholder-gray-500 focus:outline-none resize-none overflow-hidden h-auto max-h-32 sm:rounded-full rounded-md"
+          className="h-max px-4 py-3 bg-transparent text-gray-300 placeholder-gray-500 focus:outline-none resize-none overflow-hidden h-auto max-h-32 sm:rounded-full rounded-md"
           rows="1"
           disabled={isLoading}
         />
 
-        {/* Send or Stop Button */}
         <div className="flex justify-center">
           {isLoading ? (
             <button
@@ -278,7 +280,6 @@ const ChatComponent = () => {
         </div>
       </form>
 
-      {/* Footer Section */}
       <div>
         <p className="text-center text-gray-700 text-sm">
           Designed & Developed by <br /> Mohammad Inteshar Alam • 2025
