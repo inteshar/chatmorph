@@ -176,14 +176,14 @@ const ChatComponent = () => {
   return (
     <div className="h-full flex flex-col text-white py-6">
       {/* Header */}
-      <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex flex-col sm:flex-row items-center space-x-6 bg-opacity-90 p-4 rounded-lg">
+      <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center space-x-6 bg-opacity-90 p-4 rounded-lg">
         <img
           className="h-10 w-10 md:h-24 md:w-24 rounded-full"
           src={Logo}
           alt="ChatMorph Logo"
         />
         <div>
-          <h1 className="sm:text-5xl text-sm font-bold tracking-wide text-black">
+          <h1 className="sm:text-5xl text-2xl font-bold tracking-wide text-black">
             ChatMorph
           </h1>
           <h2 className="hidden sm:block text-lg font-semibold text-gray-600 mt-2">
