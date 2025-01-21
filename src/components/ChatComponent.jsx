@@ -178,7 +178,7 @@ const ChatComponent = () => {
       {/* Header */}
       <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center space-x-6 bg-opacity-90 p-4 rounded-lg">
         <img
-          className="h-10 w-10 md:h-24 md:w-24 rounded-full"
+          className="h-12 w-12 md:h-24 md:w-24 rounded-full"
           src={Logo}
           alt="ChatMorph Logo"
         />
