@@ -14,12 +14,12 @@ const ChatComponent = () => {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modelType, setModelType] = useState("mistral");
-  const [progress, setProgress] = useState(0); // State to track the progress
+  const [progress, setProgress] = useState(0);
   const chatContainerRef = useRef(null);
   const typingEffectRef = useRef(null);
-  const inputRef = useRef(null); // Reference for the input field
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true); // Track auto-scrolling state
-  const [isUserInteracting, setIsUserInteracting] = useState(false); // Track user interaction with scroll
+  const inputRef = useRef(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
 
   const handleTypingEffect = (fullText) => {
     let currentText = "";
@@ -49,33 +49,32 @@ const ChatComponent = () => {
     const newUserMessage = userMessage;
     setUserMessage("");
     setMessages((prev) => [...prev, { type: "user", content: newUserMessage }]);
-
     setMessages((prev) => [
       ...prev,
-      { type: "ai", content: "Thinking...", model: modelType, progress: 0 },
+      { type: "ai", content: "Thinking...", model: modelType },
     ]);
     setIsLoading(true);
+    setProgress(0); // Reset progress
+
+    const interval = setInterval(() => {
+      setProgress((prevProgress) => {
+        if (prevProgress < 90) return prevProgress + 1;
+        return prevProgress;
+      });
+    }, 100);
 
     try {
       let response;
-      const interval = setInterval(() => {
-        setProgress((prevProgress) => {
-          if (prevProgress < 100) {
-            return prevProgress + 1;
-          }
-          clearInterval(interval);
-          return prevProgress;
-        });
-      }, 100); // Update progress every 100ms
-
       if (modelType === "mistral") {
         response = await getMistralResponse(newUserMessage);
       } else if (modelType === "gemini") {
         response = await getGeminiResponse(newUserMessage);
       } else if (modelType === "gpt") {
-        response = await gptResponse(newUserMessage); // Handle GPT response
+        response = await gptResponse(newUserMessage);
       }
 
+      clearInterval(interval);
+      setProgress(100); // Complete progress on response
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { type: "ai", content: "", model: modelType },
@@ -83,6 +82,8 @@ const ChatComponent = () => {
 
       handleTypingEffect(response || "No response received");
     } catch (error) {
+      clearInterval(interval);
+      setProgress(100);
       setMessages((prev) => [
         ...prev.slice(0, -1),
         {
@@ -146,30 +147,98 @@ const ChatComponent = () => {
   }, [isLoading]);
 
   const renderMessageContent = (content, isAi) => {
-    if (content.startsWith("<") && content.endsWith(">")) {
-      return (
-        <div className="rounded-lg overflow-x-auto">
-          <div
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-          />
-        </div>
-      );
-    }
-
-    return (
-      <pre
-        className={`whitespace-pre-wrap break-words ${isAi
-          ? "bg-gray-800 text-white rounded-lg shadow-md p-4"
-          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
-          }`}
-        style={{
-          fontFamily: "Cantarell, serif",
-        }}
-      >
-        {content}
-      </pre>
+  // Function to convert markdown table to HTML table
+  const convertTableToHtml = (tableText) => {
+    const rows = tableText.trim().split('\n');
+    const headers = rows[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
+    const alignments = rows[1].split('|').filter(cell => cell.trim());
+    const data = rows.slice(2).map(row => 
+      row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
     );
+
+    return `
+      <table class="min-w-full border-collapse border border-gray-300 my-4">
+        <thead>
+          <tr>
+            ${headers.map(header => `
+              <th class="border border-gray-300 px-4 py-2 bg-gray-100 text-gray-700">
+                ${header}
+              </th>
+            `).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(row => `
+            <tr>
+              ${row.map(cell => `
+                <td class="border border-gray-300 px-4 py-2">
+                  ${cell}
+                </td>
+              `).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   };
+
+  // Function to process markdown content
+  const processMarkdown = (text) => {
+    let processed = text;
+
+    // Convert tables
+    const tableRegex = /\|.*\|[\s\S]+?\n\|.*\|[\s\S]+?(?=\n\n|$)/g;
+    processed = processed.replace(tableRegex, match => convertTableToHtml(match));
+
+    // Convert headers with proper styling
+    processed = processed.replace(/#{6}\s+([^\n]+)/g, '<h6 class="text-sm font-semibold mt-4 mb-2">$1</h6>');
+    processed = processed.replace(/#{5}\s+([^\n]+)/g, '<h5 class="text-base font-semibold mt-4 mb-2">$1</h5>');
+    processed = processed.replace(/#{4}\s+([^\n]+)/g, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
+    processed = processed.replace(/#{3}\s+([^\n]+)/g, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
+    processed = processed.replace(/#{2}\s+([^\n]+)/g, '<h2 class="text-2xl font-semibold mt-4 mb-2">$1</h2>');
+    processed = processed.replace(/#{1}\s+([^\n]+)/g, '<h1 class="text-3xl font-bold mt-4 mb-2">$1</h1>');
+
+    // Convert bold and italic text
+    processed = processed.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+    processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+    // Convert paragraphs
+    processed = processed.replace(/\n\n/g, '</p><p class="my-2">');
+    processed = `<p class="my-2">${processed}</p>`;
+
+    return processed;
+  };
+
+  if (content.startsWith("<") && content.endsWith(">")) {
+    return (
+      <div className="rounded-lg overflow-x-auto">
+        <div
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`whitespace-pre-wrap break-words ${
+        isAi 
+          ? "bg-gray-800 text-white rounded-lg shadow-md p-4" 
+          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
+      }`}
+      style={{
+        fontFamily: "Cantarell, serif",
+      }}
+    >
+      <div
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(processMarkdown(content))
+        }}
+      />
+    </div>
+  );
+};
 
   const handleKeyDown = (event) => {
     const isLargeScreen = window.innerWidth >= 640;
@@ -246,6 +315,7 @@ const ChatComponent = () => {
             <p className="mt-6 text-gray-400 text-base">
               Enjoy your conversations with ChatMorph and explore endless possibilities with AI!
             </p>
+            <p className="mt-6 text-gray-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
           </div>
         </dialog>
       </header>
@@ -256,69 +326,62 @@ const ChatComponent = () => {
         ref={chatContainerRef}
         onScroll={handleScroll} // Add scroll event listener
       >
-        {messages.length > 0 ? (
-          messages.map((message, index) => (
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex flex-col space-y-1 ${message.type === "user"
+              ? "items-end text-right"
+              : "items-start text-left"
+              }`}
+          >
+            {/* Chat Title */}
             <div
-              key={index}
-              className={`flex flex-col space-y-1 ${message.type === "user"
-                ? "items-end text-right"
-                : "items-start text-left"
+              className={`flex items-center justify-center w-10 h-10 px-3 py-1 rounded-full text-sm ${message.type === "user"
+                ? "bg-gray-700 text-white"
+                : "bg-white text-white"
                 }`}
             >
-              {/* Chat Title */}
-              <div
-                className={`flex items-center justify-center w-10 h-10 px-3 py-1 rounded-full text-sm ${message.type === "user"
-                  ? "bg-gray-700 text-white"
-                  : "bg-white text-white"
-                  }`}
-              >
-                {message.type === "user" ? (
-                  "Me"
-                ) : message.model === "gemini" ? (
-                  <img src={GeminiLogo} className="w-10 h-10" alt="" />
-                ) : message.model === "gpt" ? (
-                  <img src={GptLogo} className="w-10 h-10" alt="" />
-                ) : (
-                  <img src={MistralLogo} className="w-10 h-10" alt="" />
-                )}
-              </div>
-
-              {/* Chat Message Bubble */}
-              <div
-                className={`text-sm max-w-full rounded-lg ${message.type === "user"
-                  ? "bg-gray-500 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
-                  : message.error
-                    ? "bg-red-400 text-red-400 w-max"
-                    : "bg-gray-800 text-white w-max"
-                  }`}
-              >
-                {message.type === "user"
-                  ? message.content
-                  : renderMessageContent(
-                    message.content,
-                    message.type === "ai"
-                  )}
-              </div>
-
-              {/* Progress Bar for Thinking */}
-              {message.content === "Thinking..." && (
-                <div className="w-full bg-gray-300 rounded-full h-2 mt-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
+              {message.type === "user" ? (
+                "Me"
+              ) : message.model === "gemini" ? (
+                <img src={GeminiLogo} className="w-10 h-10" alt="" />
+              ) : message.model === "gpt" ? (
+                <img src={GptLogo} className="w-10 h-10" alt="" />
+              ) : (
+                <img src={MistralLogo} className="w-10 h-10" alt="" />
               )}
             </div>
-          ))
-        ) : (
-          <div className="flex justify-center items-center h-full w-full">
-            <p className="text-gray-600 text-lg">
-              Welcome! Choose a model to begin your conversation with ChatMorph
-              and explore the possibilities.
-            </p>
+
+            {/* Chat Message Bubble */}
+            <div
+              className={`text-sm max-w-full rounded-lg ${message.type === "user"
+                ? "bg-gray-500 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
+                : message.error
+                  ? "bg-red-400 text-red-400 w-max"
+                  : "bg-gray-800 text-white w-max"
+                }`}
+            >
+              {message.type === "user"
+                ? message.content
+                : renderMessageContent(
+                  message.content,
+                  message.type === "ai"
+                )}
+            </div>
+
+            {/* Progress Bar for AI Response */}
+            {isLoading && message.type === "ai" && index === messages.length - 1 && (
+              <div className="flex items-center justify-center space-x-2 py-2">
+                <progress
+                  className="progress progress-warning w-56 border border-warning"
+                  value={progress}
+                  max="100"
+                ></progress>
+              </div>
+            )}
           </div>
-        )}
+        ))}
+
       </div>
 
       {/* Input Section */}
@@ -375,12 +438,6 @@ const ChatComponent = () => {
           )}
         </div>
       </form>
-
-      <div>
-        <p className="text-center text-gray-400 text-sm">
-          Designed & Developed by <br /> Mohammad Inteshar Alam • 2025
-        </p>
-      </div>
     </div>
   );
 };

@@ -10,14 +10,19 @@ export const getMistralResponse = async (message) => {
   try {
     const chatResponse = await mistralClient.chat.complete({
       model: "mistral-large-latest",
-      messages: [{ role: "user", content: message }],
+      messages: [
+        {
+          role: "system",
+          content: "Provide clear, direct responses without using markdown headers (###) or asterisks for emphasis. Use natural formatting and spacing for readability."
+        },
+        { 
+          role: "user", 
+          content: message 
+        }
+      ],
     });
 
-    if (
-      chatResponse &&
-      chatResponse.choices &&
-      chatResponse.choices.length > 0
-    ) {
+    if (chatResponse && chatResponse.choices && chatResponse.choices.length > 0) {
       return chatResponse.choices[0].message.content;
     } else {
       throw new Error("No valid response received from Mistral");
