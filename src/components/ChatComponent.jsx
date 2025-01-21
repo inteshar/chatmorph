@@ -17,6 +17,8 @@ const ChatComponent = () => {
   const chatContainerRef = useRef(null);
   const typingEffectRef = useRef(null);
   const inputRef = useRef(null); // Reference for the input field
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true); // Track auto-scrolling state
+  const [isUserInteracting, setIsUserInteracting] = useState(false); // Track user interaction with scroll
 
   const handleTypingEffect = (fullText) => {
     let currentText = "";
@@ -36,7 +38,7 @@ const ChatComponent = () => {
         typingEffectRef.current = null;
         setIsLoading(false);
       }
-    }, 1); // Reduced delay to 1ms for faster typing
+    }, 0.1); 
   };
 
   const handleSubmit = async (e) => {
@@ -91,10 +93,39 @@ const ChatComponent = () => {
     }
   };
 
+  // Detect if the user is scrolling up or down
+  const handleScroll = () => {
+    const container = chatContainerRef.current;
+    const atBottom =
+      container.scrollHeight - container.scrollTop === container.clientHeight;
+
+    if (atBottom) {
+      setIsAutoScrolling(true); // Enable auto-scroll if at the bottom
+    } else {
+      setIsAutoScrolling(false); // Disable auto-scroll if user is scrolling up
+    }
+
+    // Check if the user is interacting (scrolling manually)
+    if (container.scrollTop < container.scrollHeight - container.clientHeight) {
+      setIsUserInteracting(true);
+    }
+  };
+
   useEffect(() => {
+    if (chatContainerRef.current && isAutoScrolling && !isUserInteracting) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, isAutoScrolling, isUserInteracting]);
+
+  useEffect(() => {
+    // Reset isUserInteracting when reaching the bottom
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      const container = chatContainerRef.current;
+      if (
+        container.scrollHeight - container.scrollTop === container.clientHeight
+      ) {
+        setIsUserInteracting(false); // Reset interaction status when at the bottom
+      }
     }
   }, [messages]);
 
@@ -166,6 +197,7 @@ const ChatComponent = () => {
       <div
         className="max-h-2/3 flex-1 overflow-auto mx-6 p-4 md:p-6 rounded-lg bg-white/50 backdrop-blur-md text-white space-y-4 shadow-lg scrollbar-hide"
         ref={chatContainerRef}
+        onScroll={handleScroll} // Add scroll event listener
       >
         {messages.length > 0 ? (
           messages.map((message, index) => (
