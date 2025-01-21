@@ -200,7 +200,7 @@ const ChatComponent = () => {
             share, or chat with AI personalities tailored to your needs.
           </h2>
         </div>
-        <button className="btn bg-transparent border-none" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
+        <button className="btn bg-transparent border-none text-lg" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
         <dialog id="my_modal_1" className="modal text-start">
           <div className="modal-box">
             <div className="flex justify-between items-center"><h3 className="font-bold text-lg text-primary">About ChatMorph</h3><form method="dialog">
