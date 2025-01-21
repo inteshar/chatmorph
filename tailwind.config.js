@@ -7,6 +7,6 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [require('tailwind-scrollbar-hide')],
+  plugins: [require('daisyui'), require('tailwind-scrollbar-hide')],
 }
 
