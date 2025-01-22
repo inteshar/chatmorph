@@ -16,31 +16,31 @@ const ChatComponent = () => {
   const [modelType, setModelType] = useState("mistral");
   const [progress, setProgress] = useState(0);
   const chatContainerRef = useRef(null);
-  const typingEffectRef = useRef(null);
+  // const typingEffectRef = useRef(null);
   const inputRef = useRef(null);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
 
-  const handleTypingEffect = (fullText) => {
-    let currentText = "";
-    let index = 0;
+  // const handleTypingEffect = (fullText) => {
+  //   let currentText = "";
+  //   let index = 0;
 
-    typingEffectRef.current = setInterval(() => {
-      if (index < fullText.length) {
-        currentText += fullText[index];
-        index += 1;
-        setMessages((prev) =>
-          prev.map((msg, idx) =>
-            idx === prev.length - 1 ? { ...msg, content: currentText } : msg
-          )
-        );
-      } else {
-        clearInterval(typingEffectRef.current);
-        typingEffectRef.current = null;
-        setIsLoading(false);
-      }
-    }, 1);
-  };
+  //   typingEffectRef.current = setInterval(() => {
+  //     if (index < fullText.length) {
+  //       currentText += fullText[index];
+  //       index += 1;
+  //       setMessages((prev) =>
+  //         prev.map((msg, idx) =>
+  //           idx === prev.length - 1 ? { ...msg, content: currentText } : msg
+  //         )
+  //       );
+  //     } else {
+  //       clearInterval(typingEffectRef.current);
+  //       typingEffectRef.current = null;
+  //       setIsLoading(false);
+  //     }
+  //   }, 1);
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,7 +54,7 @@ const ChatComponent = () => {
       { type: "ai", content: "Thinking...", model: modelType },
     ]);
     setIsLoading(true);
-    setProgress(0); // Reset progress
+    setProgress(0);
 
     const interval = setInterval(() => {
       setProgress((prevProgress) => {
@@ -74,13 +74,12 @@ const ChatComponent = () => {
       }
 
       clearInterval(interval);
-      setProgress(100); // Complete progress on response
+      setProgress(100);
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { type: "ai", content: "", model: modelType },
+        { type: "ai", content: response || "No response received", model: modelType },
       ]);
-
-      handleTypingEffect(response || "No response received");
+      setIsLoading(false);
     } catch (error) {
       clearInterval(interval);
       setProgress(100);
@@ -97,13 +96,13 @@ const ChatComponent = () => {
     }
   };
 
-  const stopResponse = () => {
-    if (typingEffectRef.current) {
-      clearInterval(typingEffectRef.current);
-      typingEffectRef.current = null;
-      setIsLoading(false);
-    }
-  };
+  // const stopResponse = () => {
+  //   if (typingEffectRef.current) {
+  //     clearInterval(typingEffectRef.current);
+  //     typingEffectRef.current = null;
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
@@ -111,9 +110,9 @@ const ChatComponent = () => {
       container.scrollHeight - container.scrollTop === container.clientHeight;
 
     if (atBottom) {
-      setIsAutoScrolling(true); // Enable auto-scroll if at the bottom
+      setIsAutoScrolling(true);
     } else {
-      setIsAutoScrolling(false); // Disable auto-scroll if user is scrolling up
+      setIsAutoScrolling(false);
     }
 
     // Check if the user is interacting (scrolling manually)
@@ -135,7 +134,7 @@ const ChatComponent = () => {
       if (
         container.scrollHeight - container.scrollTop === container.clientHeight
       ) {
-        setIsUserInteracting(false); // Reset interaction status when at the bottom
+        setIsUserInteracting(false);
       }
     }
   }, [messages]);
@@ -147,98 +146,127 @@ const ChatComponent = () => {
   }, [isLoading]);
 
   const renderMessageContent = (content, isAi) => {
-  // Function to convert markdown table to HTML table
-  const convertTableToHtml = (tableText) => {
-    const rows = tableText.trim().split('\n');
-    const headers = rows[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-    const alignments = rows[1].split('|').filter(cell => cell.trim());
-    const data = rows.slice(2).map(row => 
-      row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
-    );
+    // Function to convert markdown table to HTML table
+    const convertTableToHtml = (tableText) => {
+      const rows = tableText.trim().split('\n');
+      const headers = rows[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
+      const alignments = rows[1].split('|').filter(cell => cell.trim());
+      const data = rows.slice(2).map(row =>
+        row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
+      );
+    
+      return `
+        <div class="overflow-x-auto max-w-full">
+          <div class="inline-block min-w-full align-middle">
+            <table class="min-w-full border-collapse border border-gray-300 my-4 table-auto">
+              <thead>
+                <tr>
+                  ${headers.map(header => `
+                    <th class="border border-gray-300 px-4 py-2 bg-gray-100 text-gray-700 whitespace-nowrap">
+                      ${header}
+                    </th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `
+                  <tr>
+                    ${row.map(cell => `
+                      <td class="border border-gray-300 px-4 py-2 whitespace-nowrap">
+                        ${cell}
+                      </td>
+                    `).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    };
 
-    return `
-      <table class="min-w-full border-collapse border border-gray-300 my-4">
-        <thead>
-          <tr>
-            ${headers.map(header => `
-              <th class="border border-gray-300 px-4 py-2 bg-gray-100 text-gray-700">
-                ${header}
-              </th>
-            `).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(row => `
-            <tr>
-              ${row.map(cell => `
-                <td class="border border-gray-300 px-4 py-2">
-                  ${cell}
-                </td>
-              `).join('')}
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  };
+    // Function to process markdown content
+    const processMarkdown = (text) => {
+      let processed = text;
 
-  // Function to process markdown content
-  const processMarkdown = (text) => {
-    let processed = text;
+      // Convert tables
+      const tableRegex = /\|.*\|[\s\S]+?\n\|.*\|[\s\S]+?(?=\n\n|$)/g;
+      processed = processed.replace(tableRegex, match => convertTableToHtml(match));
 
-    // Convert tables
-    const tableRegex = /\|.*\|[\s\S]+?\n\|.*\|[\s\S]+?(?=\n\n|$)/g;
-    processed = processed.replace(tableRegex, match => convertTableToHtml(match));
+      // Convert headers with proper styling
+      processed = processed.replace(/#{6}\s+([^\n]+)/g, '<h6 class="text-sm font-semibold mt-4 mb-2">$1</h6>');
+      processed = processed.replace(/#{5}\s+([^\n]+)/g, '<h5 class="text-base font-semibold mt-4 mb-2">$1</h5>');
+      processed = processed.replace(/#{4}\s+([^\n]+)/g, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
+      processed = processed.replace(/#{3}\s+([^\n]+)/g, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
+      processed = processed.replace(/#{2}\s+([^\n]+)/g, '<h2 class="text-2xl font-semibold mt-4 mb-2">$1</h2>');
+      processed = processed.replace(/#{1}\s+([^\n]+)/g, '<h1 class="text-3xl font-bold mt-4 mb-2">$1</h1>');
 
-    // Convert headers with proper styling
-    processed = processed.replace(/#{6}\s+([^\n]+)/g, '<h6 class="text-sm font-semibold mt-4 mb-2">$1</h6>');
-    processed = processed.replace(/#{5}\s+([^\n]+)/g, '<h5 class="text-base font-semibold mt-4 mb-2">$1</h5>');
-    processed = processed.replace(/#{4}\s+([^\n]+)/g, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
-    processed = processed.replace(/#{3}\s+([^\n]+)/g, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
-    processed = processed.replace(/#{2}\s+([^\n]+)/g, '<h2 class="text-2xl font-semibold mt-4 mb-2">$1</h2>');
-    processed = processed.replace(/#{1}\s+([^\n]+)/g, '<h1 class="text-3xl font-bold mt-4 mb-2">$1</h1>');
+      // Convert bold and italic text
+      processed = processed.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+      processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-    // Convert bold and italic text
-    processed = processed.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
-    processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      // Convert paragraphs
+      processed = processed.replace(/\n\n/g, '</p><p class="my-2">');
+      processed = `<p class="my-2">${processed}</p>`;
 
-    // Convert paragraphs
-    processed = processed.replace(/\n\n/g, '</p><p class="my-2">');
-    processed = `<p class="my-2">${processed}</p>`;
+      return processed;
+    };
 
-    return processed;
-  };
+    if (content.startsWith("<") && content.endsWith(">")) {
+      return (
+        <div className="rounded-lg overflow-x-auto">
+          <div
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+          />
+        </div>
+      );
+    }
 
-  if (content.startsWith("<") && content.endsWith(">")) {
+    const handleCopy = (text) => {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Response copied to clipboard!");
+      }).catch((err) => {
+        console.error("Failed to copy text:", err);
+      });
+    };
+
     return (
-      <div className="rounded-lg overflow-x-auto">
-        <div
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
+      <div
+        className={`whitespace-pre-wrap break-words ${isAi
+          ? "bg-gray-800 text-white rounded-lg shadow-md"
+          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
+          }`}
+        style={{
+          fontFamily: "Cantarell, serif",
+        }}
+      >
+        {isAi && content !== "Thinking..." && (
+          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-lg shadow-lg">
+            <h6 className="text-gray-800 font-semibold text-md">
+              Response
+            </h6>
+            <button
+              onClick={() => handleCopy(content)}
+              className="flex items-center justify-center transition duration-300 ease-in-out hover:bg-gray-300 rounded-lg"
+            >
+              <img
+                className="h-5 w-5"
+                src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABtElEQVR4nO2ZvytGURjHP6SQQiwMzH4W/gKDQRkoZLIZZJP3DOoNIZGdRCmTsDJJFpvFSCySlEQUBr+6ddTTrVt0znl19XzqqfeeW9+n7znf9w7PAUVRlB9SBWSBPeDYQ+0Di0ADOWQAeAI+A9QbMAXkhTbRaZt9Bq7xkCYKgAvR7A6YsCfU71ijwJnQfgVqQhlpjzVq8qxfBlyKHhnf4m3294hockgYFkWPdV+irXaHjH02oskWYTC+e1QCN1Yw1UbGhGCqjWz8FyNbasQNoyeSgEbLEaPRSkCj5YjRaCWg0XLEaLQS0Gg5YjRaCWi0HDEarV9EKyPWtknxiQyJtWjwHIJl0WPFh+CqEJyxay2x+WwvfmmMDcejjXNmWgjuiPUjsf4B7Nrp4LxjbQLPQvvWTjm9TN2/RR+BUrteDzwEnsS/A914ohC4F+Jz4l00vD4JZOIK6MIz2dgu9Yh3+UAHMGn/oCuONQv0AcUEoAQ4FWberLkiUkhdLGJRXQNLwLCHC57vqs2FmcbYTZXvOrennxPKgQXgxbOJ6DPbzB9QAQwCa45X0wf2S1j9FyYURSFdfAGHpe1Zdfn2qgAAAABJRU5ErkJggg=="
+                alt="copy-icon"
+              />
+            </button>
+          </div>
+        )}
+        <div className="p-4"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(processMarkdown(content))
+          }}
         />
+
       </div>
     );
-  }
-
-  return (
-    <div
-      className={`whitespace-pre-wrap break-words ${
-        isAi 
-          ? "bg-gray-800 text-white rounded-lg shadow-md p-4" 
-          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
-      }`}
-      style={{
-        fontFamily: "Cantarell, serif",
-      }}
-    >
-      <div
-        dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(processMarkdown(content))
-        }}
-      />
-    </div>
-  );
-};
+  };
 
   const handleKeyDown = (event) => {
     const isLargeScreen = window.innerWidth >= 640;
@@ -252,7 +280,8 @@ const ChatComponent = () => {
   };
 
   return (
-    <div className="h-full flex flex-col text-white py-6">
+    <div className="h-full flex flex-col justify-between text-white py-6">
+
       {/* Header */}
       <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center justify-between bg-opacity-90 p-4 rounded-lg">
         <img
@@ -269,7 +298,7 @@ const ChatComponent = () => {
             share, or chat with AI personalities tailored to your needs.
           </h2>
         </div>
-        <button className="btn bg-transparent border-none text-lg" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
+        <button className="btn bg-transparent border-none text-lg sm:text-3xl" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
         <dialog id="my_modal_1" className="modal text-start">
           <div className="modal-box">
             <div className="flex justify-between items-center"><h3 className="font-bold text-lg text-primary">About ChatMorph</h3><form method="dialog">
@@ -315,18 +344,26 @@ const ChatComponent = () => {
             <p className="mt-6 text-gray-400 text-base">
               Enjoy your conversations with ChatMorph and explore endless possibilities with AI!
             </p>
-            <p className="mt-6 text-gray-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
+            <div className="mt-6 bg-gray-800 p-4 rounded-lg space-y-2">
+              <p className="text-gray-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
+              <span className="text-gray-400 text-sm">
+                Need help or have a complaint? Reach out to me at&nbsp;
+                <a href="https://inteshar.github.io/" target="_blank" className="text-primary">
+                  https://inteshar.github.io/
+                </a>
+              </span>
+            </div>
           </div>
         </dialog>
       </header>
 
       {/* Chat Messages Container */}
       <div
-        className="max-h-2/3 flex-1 overflow-auto mx-6 p-4 md:p-6 rounded-lg bg-white/50 backdrop-blur-md text-white space-y-4 shadow-lg scrollbar-hide"
+        className="max-h-2/3 flex-1 overflow-auto mx-6 p-4 md:p-6 rounded-lg bg-white/80 text-white space-y-4 shadow-lg scrollbar-hide"
         ref={chatContainerRef}
-        onScroll={handleScroll} // Add scroll event listener
+        onScroll={handleScroll}
       >
-        {messages.map((message, index) => (
+        {messages.length > 0 ? (messages.map((message, index) => (
           <div
             key={index}
             className={`flex flex-col space-y-1 ${message.type === "user"
@@ -373,14 +410,21 @@ const ChatComponent = () => {
             {isLoading && message.type === "ai" && index === messages.length - 1 && (
               <div className="flex items-center justify-center space-x-2 py-2">
                 <progress
-                  className="progress progress-warning w-56 border border-warning"
+                  className="progress progress-info w-56 border border-info"
                   value={progress}
                   max="100"
                 ></progress>
               </div>
             )}
           </div>
-        ))}
+        ))) : (
+          <div className="flex justify-center items-center h-full w-full">
+            <p className="text-gray-800 text-lg">
+              Welcome! Choose a model to begin your conversation with ChatMorph
+              and explore the possibilities.
+            </p>
+          </div>
+        )}
 
       </div>
 
@@ -418,7 +462,7 @@ const ChatComponent = () => {
           disabled={isLoading}
         />
 
-        <div className="flex justify-center">
+        {/* <div className="flex justify-center">
           {isLoading ? (
             <button
               type="button"
@@ -436,7 +480,14 @@ const ChatComponent = () => {
               <Send className="text-white w-5 h-5" />
             </button>
           )}
-        </div>
+        </div> */}
+        <button
+          type="submit"
+          disabled={!userMessage.trim()}
+          className="w-full flex items-center justify-center bg-purple-600 rounded-full p-3 hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Send className="text-white w-5 h-5" />
+        </button>
       </form>
     </div>
   );

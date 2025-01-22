@@ -13,7 +13,7 @@ export const getMistralResponse = async (message) => {
       messages: [
         {
           role: "system",
-          content: "Provide clear, direct responses without using markdown headers (###) or asterisks for emphasis. Use natural formatting and spacing for readability."
+          content: "Provide clear, direct responses using markdown headers (###) or asterisks for emphasis. Use natural formatting and spacing for readability."
         },
         { 
           role: "user", 
