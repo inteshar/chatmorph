@@ -1,27 +1,26 @@
-import axios from "axios";
+import OpenAI from 'openai';
 
-const API_URL = "https://api.openai.com/v1/chat/completions";
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const openai = new OpenAI({
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
-export async function gptResponse(prompt) {
+export async function gptService(message) {
   try {
-    const response = await axios.post(
-      API_URL,
-      {
-        model: "gpt-4o",
-        messages: [{ role: "developer", content: prompt }],
-        max_tokens: 150,
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
+    const chatResponse  = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "developer", content: "You are a helpful assistant." },
+        {
+            role: "user",
+            content: message,
         },
-      }
-    );
+    ],
+    store: true,
+    });
 
-    return response.data.choices[0].message.content;
+    const result = await chatResponse.sendMessage(message);
+    return result.response.text();
   } catch (error) {
     console.error("Error fetching GPT response:", error);
     throw error;

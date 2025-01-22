@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
-import { gptResponse } from "../services/gptService";
+import { gptService } from "../services/gptService";
 import DOMPurify from "dompurify";
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
@@ -51,7 +51,7 @@ const ChatComponent = () => {
       } else if (modelType === "gemini") {
         response = await getGeminiResponse(newUserMessage);
       } else if (modelType === "gpt") {
-        response = await gptResponse(newUserMessage);
+        response = await gptService(newUserMessage);
       }
 
       clearInterval(interval);
@@ -123,29 +123,28 @@ const ChatComponent = () => {
     const convertTableToHtml = (tableText) => {
       const rows = tableText.trim().split('\n');
       const headers = rows[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-      const alignments = rows[1].split('|').filter(cell => cell.trim());
       const data = rows.slice(2).map(row =>
         row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
       );
-
+    
       return `
         <div class="overflow-x-auto max-w-full">
           <div class="inline-block min-w-full align-middle">
-            <table class="min-w-full border-collapse border border-gray-300 my-4 table-auto">
-              <thead>
-                <tr>
+            <table class="min-w-full divide-y divide-gray-700 bg-gray-900 shadow-sm rounded-lg overflow-hidden">
+              <thead class="bg-gray-600">
+                <tr class="divide-x divide-gray-500">
                   ${headers.map(header => `
-                    <th class="border border-gray-300 px-4 py-2 bg-gray-100 text-gray-700 whitespace-nowrap">
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
                       ${header}
                     </th>
                   `).join('')}
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="bg-gray-900 divide-y divide-gray-700">
                 ${data.map(row => `
-                  <tr>
+                  <tr class="hover:bg-gray-700 transition-colors duration-200 divide-x divide-gray-700">
                     ${row.map(cell => `
-                      <td class="border border-gray-300 px-4 py-2 whitespace-nowrap">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 w-20">
                         ${cell}
                       </td>
                     `).join('')}
@@ -157,6 +156,8 @@ const ChatComponent = () => {
         </div>
       `;
     };
+    
+    
 
     // Function to process markdown content
     const processMarkdown = (text) => {
@@ -271,14 +272,14 @@ const ChatComponent = () => {
 
       {/* Toast */}
       {showToast && (
-        <div className="toast toast-top toast-end z-50">
-          <div className="alert alert-success">
-            <div>
-              <span className="flex items-center text-white"><img src={Check} className="h-8 w-8 rounded-full mr-2" />Response copied to clipboard!</span>
-            </div>
+        <div className="fixed top-5 right-5 z-50">
+          <div className="flex items-center bg-green-200 text-white text-sm font-bold px-4 py-3 rounded shadow-md border-2 border-green-600" role="alert">
+            <img src={Check} className="h-6 w-6 rounded-full mr-2" alt="Check Icon" />
+            <span className="text-green-800">Response copied to clipboard!</span>
           </div>
         </div>
       )}
+
 
       {/* Header */}
       <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center justify-between bg-opacity-90 p-4 rounded-lg">
@@ -442,6 +443,7 @@ const ChatComponent = () => {
             >
               <option value="mistral" className="bg-gray-800">Mistral</option>
               <option value="gemini" className="bg-gray-800">Gemini</option>
+              <option value="gpt" className="bg-gray-800">GPT</option>
             </select>
           </div>
 
