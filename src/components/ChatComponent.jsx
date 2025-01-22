@@ -473,10 +473,13 @@ const ChatComponent = () => {
           </div>
         </div>
 
-        {/* Character Count - Optional */}
+        {/* Character Count */}
         <div className="px-4 py-1 text-right">
           <span className="text-xs text-gray-400">
-            {userMessage.length} characters
+            {userMessage.length} characters |
+            {userMessage.trim().split(/\s+/).filter(Boolean).length} words |
+            {userMessage.trim().split(/(?<=[.!?])\s+/).filter(Boolean).length} sentences |
+            {userMessage.trim().split(/\n/).filter(Boolean).length} lines
           </span>
         </div>
       </form>
