@@ -154,7 +154,7 @@ const ChatComponent = () => {
       const data = rows.slice(2).map(row =>
         row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
       );
-    
+
       return `
         <div class="overflow-x-auto max-w-full">
           <div class="inline-block min-w-full align-middle">
@@ -279,24 +279,34 @@ const ChatComponent = () => {
     }
   };
 
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = `${scrollHeight}px`;
+    }
+  }, [userMessage]);
+
   return (
     <div className="h-full flex flex-col justify-between text-white py-6">
 
       {/* Header */}
       <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center justify-between bg-opacity-90 p-4 rounded-lg">
-        <img
-          className="h-12 w-12 md:h-24 md:w-24 rounded-full"
-          src={Logo}
-          alt="ChatMorph Logo"
-        />
-        <div>
-          <h1 className="sm:text-4xl text-2xl font-bold tracking-wide text-white">
+
+        <div className="flex flex-row items-center">
+          <img
+            className="h-12 w-12 md:h-24 md:w-24 rounded-full"
+            src={Logo}
+            alt="ChatMorph Logo"
+          />
+          <div className="flex flex-col"><h1 className="sm:text-3xl text-2xl font-bold tracking-wide text-white">
             ChatMorph
           </h1>
-          <h2 className="hidden sm:block text-lg font-semibold text-gray-400 mt-2">
-            Connect with top AI models and explore endless possibilities. Ask,
-            share, or chat with AI personalities tailored to your needs.
-          </h2>
+            <h2 className="hidden sm:block text-md font-semibold text-gray-400 mt-2">
+              Connect with top AI models and explore endless possibilities. Ask,
+              share, or chat with AI personalities tailored to your needs.
+            </h2></div>
         </div>
         <button className="btn bg-transparent border-none text-lg sm:text-3xl" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
         <dialog id="my_modal_1" className="modal text-start">
@@ -430,64 +440,56 @@ const ChatComponent = () => {
 
       {/* Input Section */}
       <form
-        className="h-max my-4 mx-4 p-2 bg-gray-600 rounded-lg sm:rounded-full grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] items-center"
+        className="sticky bottom-0 mx-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl shadow-xl"
         onSubmit={handleSubmit}
       >
-        <div className="sm:w-24 flex items-center justify-center bg-gray-900 sm:rounded-full rounded-lg">
-          <select
-            value={modelType}
-            onChange={(e) => setModelType(e.target.value)}
-            className="text-sm bg-transparent text-white px-1 py-3 sm:rounded-full rounded-lg shadow-md text-lg w-full cursor-pointer transition ease-in-out duration-300"
-          >
-            <option value="mistral" className="bg-gray-800">
-              Mistral
-            </option>
-            <option value="gemini" className="bg-gray-800">
-              Gemini
-            </option>
-            {/* <option value="gpt" className="bg-gray-800">
-              GPT
-            </option> */}
-          </select>
-        </div>
-
-        <textarea
-          ref={inputRef}
-          value={userMessage}
-          onChange={(e) => setUserMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          className="h-max px-4 py-3 bg-transparent text-gray-100 placeholder-gray-400 focus:outline-none resize-none overflow-hidden h-auto max-h-32 sm:rounded-full rounded-md"
-          rows="1"
-          disabled={isLoading}
-        />
-
-        {/* <div className="flex justify-center">
-          {isLoading ? (
-            <button
-              type="button"
-              onClick={stopResponse}
-              className="w-full flex items-center justify-center bg-red-600 rounded-full p-3 hover:bg-red-700 transition"
+        <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
+          {/* Model Selection */}
+          <div className="w-full sm:w-32">
+            <select
+              value={modelType}
+              onChange={(e) => setModelType(e.target.value)}
+              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
             >
-              <X className="text-white w-5 h-5" />
-            </button>
-          ) : (
+              <option value="mistral" className="bg-gray-800">Mistral</option>
+              <option value="gemini" className="bg-gray-800">Gemini</option>
+            </select>
+          </div>
+
+          {/* Input Field Container */}
+          <div className="relative flex-1 w-full">
+            <textarea
+              ref={inputRef}
+              value={userMessage}
+              onChange={(e) => setUserMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              rows="1"
+              disabled={isLoading}
+              className="w-full bg-gray-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 transition-all duration-200"
+              style={{
+                overflow: 'hidden',
+                lineHeight: '1.5'
+              }}
+            />
+
+            {/* Send Button */}
             <button
               type="submit"
-              disabled={!userMessage.trim()}
-              className="w-full flex items-center justify-center bg-purple-600 rounded-full p-3 hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!userMessage.trim() || isLoading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              <Send className="text-white w-5 h-5" />
+              <Send className="h-4 w-4 text-white" />
             </button>
-          )}
-        </div> */}
-        <button
-          type="submit"
-          disabled={!userMessage.trim()}
-          className="w-full flex items-center justify-center bg-purple-600 rounded-full p-3 hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Send className="text-white w-5 h-5" />
-        </button>
+          </div>
+        </div>
+
+        {/* Character Count - Optional */}
+        <div className="px-4 py-1 text-right">
+          <span className="text-xs text-gray-400">
+            {userMessage.length} characters
+          </span>
+        </div>
       </form>
     </div>
   );
