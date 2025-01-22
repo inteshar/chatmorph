@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
-import { gptResponse } from "../services/gptService"; 
+import { gptResponse } from "../services/gptService";
 import DOMPurify from "dompurify";
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
@@ -222,9 +222,7 @@ const ChatComponent = () => {
         {isAi && content !== "Thinking..." && (
           <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-lg shadow-lg">
             <h6 className="text-gray-800 font-semibold text-md">
-              {showToast ? (
-                  <span className="flex items-center"><img src={Check} className="h-5 w-5 rounded-full" /> Response copied to clipboard!</span>
-              ) : <span>Response</span>}
+              <span>Response</span>
             </h6>
             <button
               onClick={() => handleCopy(content)}
@@ -270,6 +268,17 @@ const ChatComponent = () => {
 
   return (
     <div className="h-full flex flex-col justify-between text-white py-6">
+
+      {/* Toast */}
+      {showToast && (
+        <div className="toast toast-top toast-end z-50">
+          <div className="alert alert-success">
+            <div>
+              <span className="flex items-center text-white"><img src={Check} className="h-8 w-8 rounded-full mr-2" />Response copied to clipboard!</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center justify-between bg-opacity-90 p-4 rounded-lg">
