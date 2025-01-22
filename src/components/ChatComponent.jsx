@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
-import { gptService } from "../services/gptService";
+// import { gptService } from "../services/gptService";
 import DOMPurify from "dompurify";
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
@@ -443,7 +443,7 @@ const ChatComponent = () => {
             >
               <option value="mistral" className="bg-gray-800">Mistral</option>
               <option value="gemini" className="bg-gray-800">Gemini</option>
-              <option value="gpt" className="bg-gray-800">GPT</option>
+              {/* <option value="gpt" className="bg-gray-800">GPT</option> */}
             </select>
           </div>
 
