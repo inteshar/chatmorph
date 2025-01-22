@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
-import { gptResponse } from "../services/gptService"; // Import the GPT service
+import { gptResponse } from "../services/gptService"; 
 import DOMPurify from "dompurify";
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
 import GeminiLogo from "../assets/geminiLogo.svg";
-import GptLogo from "../assets/openaiLogo.svg"; // Add GPT Logo
+import GptLogo from "../assets/openaiLogo.svg";
+import Check from "../assets/check.gif";
 
 const ChatComponent = () => {
   const [userMessage, setUserMessage] = useState("");
@@ -20,27 +21,7 @@ const ChatComponent = () => {
   const inputRef = useRef(null);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
-
-  // const handleTypingEffect = (fullText) => {
-  //   let currentText = "";
-  //   let index = 0;
-
-  //   typingEffectRef.current = setInterval(() => {
-  //     if (index < fullText.length) {
-  //       currentText += fullText[index];
-  //       index += 1;
-  //       setMessages((prev) =>
-  //         prev.map((msg, idx) =>
-  //           idx === prev.length - 1 ? { ...msg, content: currentText } : msg
-  //         )
-  //       );
-  //     } else {
-  //       clearInterval(typingEffectRef.current);
-  //       typingEffectRef.current = null;
-  //       setIsLoading(false);
-  //     }
-  //   }, 1);
-  // };
+  const [showToast, setShowToast] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,14 +76,6 @@ const ChatComponent = () => {
       setIsLoading(false);
     }
   };
-
-  // const stopResponse = () => {
-  //   if (typingEffectRef.current) {
-  //     clearInterval(typingEffectRef.current);
-  //     typingEffectRef.current = null;
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
@@ -223,9 +196,14 @@ const ChatComponent = () => {
       );
     }
 
+    // Handle Copy action
     const handleCopy = (text) => {
       navigator.clipboard.writeText(text).then(() => {
-        alert("Response copied to clipboard!");
+        // console.log("Response copied to clipboard!");
+        setShowToast(true);  // Show toast when the text is copied
+
+        // Hide toast after 3 seconds
+        setTimeout(() => setShowToast(false), 3000);
       }).catch((err) => {
         console.error("Failed to copy text:", err);
       });
@@ -244,7 +222,9 @@ const ChatComponent = () => {
         {isAi && content !== "Thinking..." && (
           <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-lg shadow-lg">
             <h6 className="text-gray-800 font-semibold text-md">
-              Response
+              {showToast ? (
+                  <span className="flex items-center"><img src={Check} className="h-5 w-5 rounded-full" /> Response copied to clipboard!</span>
+              ) : <span>Response</span>}
             </h6>
             <button
               onClick={() => handleCopy(content)}
