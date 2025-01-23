@@ -1,9 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, X } from "lucide-react";
+
+
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
 // import { gptService } from "../services/gptService";
+
+
 import DOMPurify from "dompurify";
+
+
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
 import GeminiLogo from "../assets/geminiLogo.svg";
@@ -16,6 +22,7 @@ const ChatComponent = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [modelType, setModelType] = useState("mistral");
   const [progress, setProgress] = useState(0);
+  const [conversationContext, setConversationContext] = useState([]);
   const chatContainerRef = useRef(null);
   // const typingEffectRef = useRef(null);
   const inputRef = useRef(null);
@@ -29,7 +36,18 @@ const ChatComponent = () => {
 
     const newUserMessage = userMessage;
     setUserMessage("");
-    setMessages((prev) => [...prev, { type: "user", content: newUserMessage }]);
+    
+    // Update messages and context
+    const updatedContext = [
+      ...conversationContext, 
+      { role: "user", content: newUserMessage }
+    ];
+    setConversationContext(updatedContext);
+
+    setMessages((prev) => [
+      ...prev, 
+      { type: "user", content: newUserMessage }
+    ]);
     setMessages((prev) => [
       ...prev,
       { type: "ai", content: "Thinking...", model: modelType },
@@ -47,12 +65,17 @@ const ChatComponent = () => {
     try {
       let response;
       if (modelType === "mistral") {
-        response = await getMistralResponse(newUserMessage);
+        response = await getMistralResponse(updatedContext);
       } else if (modelType === "gemini") {
-        response = await getGeminiResponse(newUserMessage);
-      } else if (modelType === "gpt") {
-        response = await gptService(newUserMessage);
+        response = await getGeminiResponse(updatedContext);
       }
+      
+      // Update context and messages
+      const updatedFullContext = [
+        ...updatedContext,
+        { role: "assistant", content: response || "No response received" }
+      ];
+      setConversationContext(updatedFullContext);
 
       clearInterval(interval);
       setProgress(100);
@@ -430,7 +453,7 @@ const ChatComponent = () => {
 
       {/* Input Section */}
       <form
-        className="sticky bottom-0 mx-4 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl shadow-xl"
+        className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl shadow-xl"
         onSubmit={handleSubmit}
       >
         <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">

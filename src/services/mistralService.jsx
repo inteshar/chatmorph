@@ -1,25 +1,24 @@
 import { Mistral } from "@mistralai/mistralai";
 
-// Mistral API Key (ensure it's kept secure)
 const mistralApiKey = import.meta.env.VITE_MISTRAL_API_KEY;
 
-// Initialize Mistral client with Mistral API key
 const mistralClient = new Mistral({ apiKey: mistralApiKey });
 
-export const getMistralResponse = async (message) => {
+export const getMistralResponse = async (conversationContext) => {
   try {
+   
+    const messages = [
+      {
+        role: "system",
+        content: "Provide clear, direct responses using markdown headers (###) or asterisks for emphasis. Use natural formatting and spacing for readability."
+      },
+      
+      ...conversationContext
+    ];
+
     const chatResponse = await mistralClient.chat.complete({
       model: "mistral-large-latest",
-      messages: [
-        {
-          role: "system",
-          content: "Provide clear, direct responses using markdown headers (###) or asterisks for emphasis. Use natural formatting and spacing for readability."
-        },
-        { 
-          role: "user", 
-          content: message 
-        }
-      ],
+      messages: messages,
     });
 
     if (chatResponse && chatResponse.choices && chatResponse.choices.length > 0) {
