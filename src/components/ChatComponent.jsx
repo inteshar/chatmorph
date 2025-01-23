@@ -4,6 +4,7 @@ import { Send, X } from "lucide-react";
 
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
+// import { claudeService } from "../services/claudeService";
 // import { gptService } from "../services/gptService";
 
 
@@ -36,16 +37,16 @@ const ChatComponent = () => {
 
     const newUserMessage = userMessage;
     setUserMessage("");
-    
+
     // Update messages and context
     const updatedContext = [
-      ...conversationContext, 
+      ...conversationContext,
       { role: "user", content: newUserMessage }
     ];
     setConversationContext(updatedContext);
 
     setMessages((prev) => [
-      ...prev, 
+      ...prev,
       { type: "user", content: newUserMessage }
     ]);
     setMessages((prev) => [
@@ -68,8 +69,10 @@ const ChatComponent = () => {
         response = await getMistralResponse(updatedContext);
       } else if (modelType === "gemini") {
         response = await getGeminiResponse(updatedContext);
+      } else if (modelType === "claude") {
+        response = await claudeService(newUserMessage);
       }
-      
+
       // Update context and messages
       const updatedFullContext = [
         ...updatedContext,
@@ -149,7 +152,7 @@ const ChatComponent = () => {
       const data = rows.slice(2).map(row =>
         row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
       );
-    
+
       return `
         <div class="overflow-x-auto max-w-full">
           <div class="inline-block min-w-full align-middle">
@@ -179,8 +182,8 @@ const ChatComponent = () => {
         </div>
       `;
     };
-    
-    
+
+
 
     // Function to process markdown content
     const processMarkdown = (text) => {
@@ -407,8 +410,20 @@ const ChatComponent = () => {
                 <img src={GeminiLogo} className="w-10 h-10" alt="" />
               ) : message.model === "gpt" ? (
                 <img src={GptLogo} className="w-10 h-10" alt="" />
-              ) : (
+              ) : message.model === "mistral" ? (
                 <img src={MistralLogo} className="w-10 h-10" alt="" />
+              ) : (
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA
+                ABwAAAAcCAMAAABF0y+mAAAAJFBMVEVHcEzZd1fZd1fZd1fZd1fad1jZd1
+                fZd1fZd1fZd1fZd1fZd1deZDooAAAADHRSTlMA//F3mhLfyjpWsiMDGU5m
+                AAABH0lEQVQokXVSWXbEIAzDuw33v28FJCnpTP3BA6+yRGvbLK39a0F9RUv
+                HZ5CIazZwkm+VpCi1nZP1GpJEnq2NdabzU594N0XpzInRhq/7jvm8wsOjFf
+                VmcQG4guTWZKYL8HSiA1XFHDjgHMqCpKfpNPgIXiZVVvSJ9yazOJARxBiYf
+                /ZMoIUxrYGjRHs/di2nbdzDZxIb1maPriold3QlyFJCAonMd08A7/WhkN19
+                PWDolSeiXU7URWPm8S3ewMCuvGpB+kigVXvWZKlgIVycF0Hjl6DIoVRCGKz
+                9pE8W0QKXkgkIEmjzUDuh11TSuVkn348DLHs1Y7/kzTi+ksX8GLn0wBRrdv
+                CQS949C43fstj6FhfM8Unfqqwv3gf3+/kDMJgHC0kwnjEAAAAASUVORK5CYII=" 
+                className="w-10 h-10" alt="" />
               )}
             </div>
 
@@ -464,8 +479,9 @@ const ChatComponent = () => {
               onChange={(e) => setModelType(e.target.value)}
               className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
             >
-              <option value="mistral" className="bg-gray-800">Mistral</option>
-              <option value="gemini" className="bg-gray-800">Gemini</option>
+              <option value="mistral" className="bg-gray-800">Mistral Lg. Latest</option>
+              <option value="gemini" className="bg-gray-800">Gemini 1.5 flash</option>
+              {/* <option value="claude" className="bg-gray-800">Claude</option> */}
               {/* <option value="gpt" className="bg-gray-800">GPT</option> */}
             </select>
           </div>
