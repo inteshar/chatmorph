@@ -9,6 +9,11 @@ import { getGeminiResponse } from "../services/geminiService";
 
 
 import DOMPurify from "dompurify";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 
 import Logo from "../assets/logo.png";
@@ -145,89 +150,12 @@ const ChatComponent = () => {
   }, [isLoading]);
 
   const renderMessageContent = (content, isAi) => {
-    // Function to convert markdown table to HTML table
-    const convertTableToHtml = (tableText) => {
-      const rows = tableText.trim().split('\n');
-      const headers = rows[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-      const data = rows.slice(2).map(row =>
-        row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
-      );
-
-      return `
-        <div class="overflow-x-auto max-w-full">
-          <div class="inline-block min-w-full align-middle">
-            <table class="min-w-full divide-y divide-gray-700 bg-gray-900 shadow-sm rounded-lg overflow-hidden">
-              <thead class="bg-gray-600">
-                <tr class="divide-x divide-gray-500">
-                  ${headers.map(header => `
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      ${header}
-                    </th>
-                  `).join('')}
-                </tr>
-              </thead>
-              <tbody class="bg-gray-900 divide-y divide-gray-700">
-                ${data.map(row => `
-                  <tr class="hover:bg-gray-700 transition-colors duration-200 divide-x divide-gray-700">
-                    ${row.map(cell => `
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300 w-20">
-                        ${cell}
-                      </td>
-                    `).join('')}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    };
-
-
-
-    // Function to process markdown content
-    const processMarkdown = (text) => {
-      let processed = text;
-
-      // Convert tables
-      const tableRegex = /\|.*\|[\s\S]+?\n\|.*\|[\s\S]+?(?=\n\n|$)/g;
-      processed = processed.replace(tableRegex, match => convertTableToHtml(match));
-
-      // Convert headers with proper styling
-      processed = processed.replace(/#{6}\s+([^\n]+)/g, '<h6 class="text-sm font-semibold mt-4 mb-2">$1</h6>');
-      processed = processed.replace(/#{5}\s+([^\n]+)/g, '<h5 class="text-base font-semibold mt-4 mb-2">$1</h5>');
-      processed = processed.replace(/#{4}\s+([^\n]+)/g, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
-      processed = processed.replace(/#{3}\s+([^\n]+)/g, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
-      processed = processed.replace(/#{2}\s+([^\n]+)/g, '<h2 class="text-2xl font-semibold mt-4 mb-2">$1</h2>');
-      processed = processed.replace(/#{1}\s+([^\n]+)/g, '<h1 class="text-3xl font-bold mt-4 mb-2">$1</h1>');
-
-      // Convert bold and italic text
-      processed = processed.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
-      processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-      // Convert paragraphs
-      processed = processed.replace(/\n\n/g, '</p><p class="my-2">');
-      processed = `<p class="my-2">${processed}</p>`;
-
-      return processed;
-    };
-
-    if (content.startsWith("<") && content.endsWith(">")) {
-      return (
-        <div className="rounded-lg overflow-x-auto">
-          <div
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
-          />
-        </div>
-      );
-    }
-
-    // Handle Copy action
+    
+    // Copy-to-clipboard function
     const handleCopy = (text) => {
       navigator.clipboard.writeText(text).then(() => {
         // console.log("Response copied to clipboard!");
-        setShowToast(true);  // Show toast when the text is copied
+        setShowToast(true); 
 
         // Hide toast after 3 seconds
         setTimeout(() => setShowToast(false), 3000);
@@ -235,22 +163,23 @@ const ChatComponent = () => {
         console.error("Failed to copy text:", err);
       });
     };
-
+  
+  
     return (
       <div
-        className={`whitespace-pre-wrap break-words ${isAi
-          ? "bg-gray-800 text-white rounded-lg shadow-md"
-          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
-          }`}
+        className={`whitespace-pre-wrap break-words ${
+          isAi
+            ? "bg-gray-800 text-white rounded-lg shadow-md"
+            : "bg-gray-300 text-black rounded-lg shadow-md p-4"
+        }`}
         style={{
           fontFamily: "Cantarell, serif",
         }}
       >
+        {/* AI Response Header */}
         {isAi && content !== "Thinking..." && (
           <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-lg shadow-lg">
-            <h6 className="text-gray-800 font-semibold text-md">
-              <span>Response</span>
-            </h6>
+            <h6 className="text-gray-800 font-semibold text-md">Response</h6>
             <button
               onClick={() => handleCopy(content)}
               className="flex items-center justify-center transition duration-300 ease-in-out hover:bg-gray-300 rounded-lg"
@@ -263,12 +192,62 @@ const ChatComponent = () => {
             </button>
           </div>
         )}
-        <div className="p-4"
-          dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(processMarkdown(content))
-          }}
-        />
-
+  
+        {/* Render Markdown Content */}
+        <div className="p-4 mt-0 mb-0">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || ""); // Detect language
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code
+                    className={`bg-gray-200 text-gray-800 rounded-md px-1 py-0.5 ${
+                      inline ? "text-sm" : ""
+                    }`}
+                    {...props}
+                  >
+                    {children}
+                  </code>
+                );
+              },
+              table: ({ children }) => (
+                <div className="overflow-x-auto -mt-[110%]">
+                  <table className="min-w-full border border-gray-700 divide-y divide-gray-700 bg-gray-500 shadow-sm rounded-lg overflow-hidden">
+                    {children}
+                  </table>
+                </div>
+              ),
+              th: ({ children }) => (
+                <th className="px-6 py-3 text-left text-xs font-medium bg-gray-600 text-gray-300 uppercase border border-gray-700">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="px-6 py-4 text-sm text-gray-300 border border-gray-700">
+                  {children}
+                </td>
+              ),
+              tr: ({ children }) => (
+                <tr className="hover:bg-gray-700 transition-colors duration-200 divide-x divide-gray-700">
+                  {children}
+                </tr>
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
       </div>
     );
   };
@@ -429,7 +408,7 @@ const ChatComponent = () => {
 
             {/* Chat Message Bubble */}
             <div
-              className={`text-sm max-w-full rounded-lg ${message.type === "user"
+              className={`text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
                 ? "bg-gray-500 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
                 : message.error
                   ? "bg-red-400 text-red-400 w-max"
