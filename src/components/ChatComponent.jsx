@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ArrowDown } from "lucide-react";
+import { Send, ArrowDown, WifiOff } from "lucide-react";
 
 
 import { getMistralResponse } from "../services/mistralService";
@@ -35,6 +35,7 @@ const ChatComponent = () => {
   const [showToast, setShowToast] = useState(false);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const [theme, setTheme] = useState('light');
+  const [networkStatus, setNetworkStatus] = useState("");
 
 
   // Toggle theme between 'light' and 'dark'
@@ -46,8 +47,8 @@ const ChatComponent = () => {
   // Handle theme change and apply it
   const handleThemeChange = (selectedTheme) => {
     setTheme(selectedTheme);
-    Cookies.set("theme", selectedTheme, { 
-      expires: 30, 
+    Cookies.set("theme", selectedTheme, {
+      expires: 30,
       SameSite: "Lax"  // Set the SameSite attribute
     }); // Save theme in cookie for 30 days
     document.documentElement.setAttribute("data-theme", selectedTheme); // Apply theme
@@ -285,6 +286,24 @@ const ChatComponent = () => {
     );
   };
 
+
+  // Check network status
+  useEffect(() => {
+    if (navigator.onLine) {
+      setNetworkStatus("online");
+    } else {
+      setNetworkStatus("offline");
+    }
+
+    window.addEventListener("offline", (e) => {
+      setNetworkStatus("offline");
+    });
+
+    window.addEventListener("online", (e) => {
+      setNetworkStatus("online");
+    });
+  }, []);
+
   const handleKeyDown = (event) => {
     const isLargeScreen = window.innerWidth >= 640;
 
@@ -342,13 +361,13 @@ const ChatComponent = () => {
           <label className="swap swap-rotate">
             <input type="checkbox" onClick={toggleTheme} className="theme-controller" value="synthwave" />
 
-          {theme === 'light' ?  <svg
+            {theme === 'light' ? <svg
               className="h-6 w-6 fill-current"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
-            </svg>:<svg
+            </svg> : <svg
               className="h-6 w-6 fill-current"
               xmlns="http://www.w3.org/2000/svg"
             >
@@ -435,11 +454,10 @@ const ChatComponent = () => {
           >
             {/* Chat Title */}
             <div
-              className={`text-slate-200 flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${
-                message.type === "user"
-                  ? `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-slate-700 rounded-r-full rounded-tl-full`
-                  : `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-white rounded-l-full rounded-tr-full`
-              }`}
+              className={`text-slate-200 flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${message.type === "user"
+                ? `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-slate-700 rounded-r-full rounded-tl-full`
+                : `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-white rounded-l-full rounded-tr-full`
+                }`}
             >
               {message.type === "user" ? (
                 "Me"
@@ -514,93 +532,99 @@ const ChatComponent = () => {
       )}
 
       {/* Input Section */}
-      <form
-        className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl shadow-xl"
-        onSubmit={handleSubmit}
-      >
-        <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
-          
-          {/* Model Selection */}
-          <div className="w-full sm:w-32 pe-2">
-            <div className="dropdown w-full">
-              <summary tabIndex={0} className={`w-full btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
-              <ul tabIndex={0} className={`menu dropdown-content rounded-box z-[1] w-52 p-2 shadow absolute bottom-full mb-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
-                <li>
-                  <a
-                    onClick={() => setModelType('mistral')}
-                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                  >
-                    Mistral Lg. Latest
-                  </a>
-                </li>
-                <li>
-                  <a
-                    onClick={() => setModelType('gemini')}
-                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                  >
-                    Gemini 1.5 flash
-                  </a>
-                </li>
-                {/* Uncomment the options you want to use */}
-                {/* <li>
-                  <a 
-                    onClick={() => setModelType('claude')} 
-                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                  >
-                    Claude
-                  </a>
-                </li> */}
-                            {/* <li>
-                  <a 
-                    onClick={() => setModelType('gpt')} 
-                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                  >
-                    GPT
-                  </a>
-                </li> */}
-              </ul>
+      {networkStatus === "online" ?
+        <form
+          className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl shadow-xl"
+          onSubmit={handleSubmit}
+        >
+          <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
+
+            {/* Model Selection */}
+            <div className="w-full sm:w-32 pe-2">
+              <div className="dropdown w-full">
+                <summary tabIndex={0} className={`w-full btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
+                <ul tabIndex={0} className={`menu dropdown-content rounded-box z-[1] w-52 p-2 shadow absolute bottom-full mb-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+                  <li>
+                    <a
+                      onClick={() => setModelType('mistral')}
+                      className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                    >
+                      Mistral Lg. Latest
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      onClick={() => setModelType('gemini')}
+                      className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                    >
+                      Gemini 1.5 flash
+                    </a>
+                  </li>
+                  {/* Uncomment the options you want to use */}
+                  {/* <li>
+              <a 
+                onClick={() => setModelType('claude')} 
+                className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+              >
+                Claude
+              </a>
+            </li> */}
+                  {/* <li>
+              <a 
+                onClick={() => setModelType('gpt')} 
+                className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+              >
+                GPT
+              </a>
+            </li> */}
+                </ul>
+              </div>
+
             </div>
 
+            {/* Input Field Container */}
+            <div className="relative flex-1 w-full">
+              <textarea
+                ref={inputRef}
+                value={userMessage}
+                onChange={(e) => setUserMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                rows="1"
+                disabled={isLoading}
+                className="w-full bg-slate-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-400 transition-all duration-200"
+                style={{
+                  overflow: 'hidden',
+                  lineHeight: '1.5'
+                }}
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!userMessage.trim() || isLoading}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                <Send className="h-4 w-4 text-white" />
+              </button>
+            </div>
           </div>
 
-          {/* Input Field Container */}
-          <div className="relative flex-1 w-full">
-            <textarea
-              ref={inputRef}
-              value={userMessage}
-              onChange={(e) => setUserMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              rows="1"
-              disabled={isLoading}
-              className="w-full bg-slate-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-400 transition-all duration-200"
-              style={{
-                overflow: 'hidden',
-                lineHeight: '1.5'
-              }}
-            />
-
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={!userMessage.trim() || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              <Send className="h-4 w-4 text-white" />
-            </button>
+          {/* Character Count */}
+          <div className="px-4 py-1 text-right">
+            <span className="text-xs text-slate-400">
+              {userMessage.length} characters |
+              {userMessage.trim().split(/\s+/).filter(Boolean).length} words |
+              {userMessage.trim().split(/(?<=[.!?])\s+/).filter(Boolean).length} sentences |
+              {userMessage.trim().split(/\n/).filter(Boolean).length} lines
+            </span>
           </div>
+        </form> :
+        <div role="alert" className="flex items-center justify-center alert alert-error sticky bottom-0 mx-4 -mb-3 shadow-xl">
+          <WifiOff className="h-6 w-6 shrink-0 stroke-current" />
+          <span>You are offline. Please check your internet connection.</span>
         </div>
-
-        {/* Character Count */}
-        <div className="px-4 py-1 text-right">
-          <span className="text-xs text-slate-400">
-            {userMessage.length} characters |
-            {userMessage.trim().split(/\s+/).filter(Boolean).length} words |
-            {userMessage.trim().split(/(?<=[.!?])\s+/).filter(Boolean).length} sentences |
-            {userMessage.trim().split(/\n/).filter(Boolean).length} lines
-          </span>
-        </div>
-      </form>
+      }
     </div>
   );
 };
