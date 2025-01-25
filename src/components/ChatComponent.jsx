@@ -145,19 +145,21 @@ const ChatComponent = () => {
 
   useEffect(() => {
     const disablePullToRefresh = (evt) => {
-      if (window.scrollY === 0 && evt.touches) {
-        evt.preventDefault(); 
+      // Only prevent default behavior if the user is at the top of the page
+      if (window.scrollY === 0 && evt.touches.length > 0) {
+        evt.preventDefault(); // Prevent pull-to-refresh only when at the top of the page
       }
     };
   
-    document.addEventListener('touchstart', disablePullToRefresh, { passive: false });
-    document.addEventListener('touchmove', disablePullToRefresh, { passive: false });
+    // Add event listeners for touchstart and touchmove to prevent pull-to-refresh
+    document.body.addEventListener('touchmove', disablePullToRefresh, { passive: false });
   
     return () => {
-      document.removeEventListener('touchstart', disablePullToRefresh);
-      document.removeEventListener('touchmove', disablePullToRefresh);
+      // Cleanup the event listeners on component unmount
+      document.body.removeEventListener('touchmove', disablePullToRefresh);
     };
   }, []);
+  
   
 
   const renderMessageContent = (content, isAi) => {
