@@ -505,9 +505,9 @@ const ChatComponent = () => {
         <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
           
           {/* Model Selection */}
-          <div className="w-full sm:w-32">
-            <div className="dropdown">
-              <summary tabIndex={0} className={`btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
+          <div className="w-full sm:w-32 pe-2">
+            <div className="dropdown w-full">
+              <summary tabIndex={0} className={`w-full btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
               <ul tabIndex={0} className={`menu dropdown-content rounded-box z-[1] w-52 p-2 shadow absolute bottom-full mb-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
                 <li>
                   <a
@@ -527,21 +527,21 @@ const ChatComponent = () => {
                 </li>
                 {/* Uncomment the options you want to use */}
                 {/* <li>
-      <a 
-        onClick={() => setModelType('claude')} 
-        className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-      >
-        Claude
-      </a>
-    </li> */}
-                {/* <li>
-      <a 
-        onClick={() => setModelType('gpt')} 
-        className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-      >
-        GPT
-      </a>
-    </li> */}
+                  <a 
+                    onClick={() => setModelType('claude')} 
+                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                  >
+                    Claude
+                  </a>
+                </li> */}
+                            {/* <li>
+                  <a 
+                    onClick={() => setModelType('gpt')} 
+                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                  >
+                    GPT
+                  </a>
+                </li> */}
               </ul>
             </div>
 
