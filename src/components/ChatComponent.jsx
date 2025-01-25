@@ -297,7 +297,7 @@ const ChatComponent = () => {
 
 
       {/* Header */}
-      <header className="relative -mt-10 z-10 w-full px-6 text-center sm:text-start flex items-center justify-between bg-opacity-90 p-4 rounded-lg">
+      <header className="relative -mt-10 z-10 w-full text-center sm:text-start flex items-center justify-between bg-opacity-90 py-4 rounded-lg">
 
         <div className="flex flex-row items-center">
           <img
@@ -362,7 +362,7 @@ const ChatComponent = () => {
             <div className="mt-6 bg-gray-800 p-4 rounded-lg space-y-2">
               <p className="text-gray-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
               <span className="text-gray-400 text-sm">
-                Need help or have a complaint? Reach out to me at&nbsp;
+                Need help or have a complaint? Reach out to me on&nbsp;
                 <a href="https://inteshar.github.io/" target="_blank" className="text-primary">
                   https://inteshar.github.io/
                 </a>
