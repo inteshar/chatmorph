@@ -145,17 +145,20 @@ const ChatComponent = () => {
 
   useEffect(() => {
     const disablePullToRefresh = (evt) => {
-      if (evt.cancelable) {
-        evt.preventDefault();
+      if (window.scrollY === 0 && evt.touches) {
+        evt.preventDefault(); 
       }
     };
-
+  
     document.addEventListener('touchstart', disablePullToRefresh, { passive: false });
-
+    document.addEventListener('touchmove', disablePullToRefresh, { passive: false });
+  
     return () => {
       document.removeEventListener('touchstart', disablePullToRefresh);
+      document.removeEventListener('touchmove', disablePullToRefresh);
     };
   }, []);
+  
 
   const renderMessageContent = (content, isAi) => {
 
