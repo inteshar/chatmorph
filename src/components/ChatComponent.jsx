@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, X } from "lucide-react";
+import { Send, ArrowDown } from "lucide-react";
 
 
 import { getMistralResponse } from "../services/mistralService";
@@ -8,7 +8,7 @@ import { getGeminiResponse } from "../services/geminiService";
 // import { gptService } from "../services/gptService";
 
 
-import DOMPurify from "dompurify";
+// import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -30,11 +30,9 @@ const ChatComponent = () => {
   const [progress, setProgress] = useState(0);
   const [conversationContext, setConversationContext] = useState([]);
   const chatContainerRef = useRef(null);
-  // const typingEffectRef = useRef(null);
   const inputRef = useRef(null);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +41,6 @@ const ChatComponent = () => {
     const newUserMessage = userMessage;
     setUserMessage("");
 
-    // Update messages and context
     const updatedContext = [
       ...conversationContext,
       { role: "user", content: newUserMessage }
@@ -78,7 +75,6 @@ const ChatComponent = () => {
         response = await claudeService(newUserMessage);
       }
 
-      // Update context and messages
       const updatedFullContext = [
         ...updatedContext,
         { role: "assistant", content: response || "No response received" }
@@ -113,33 +109,31 @@ const ChatComponent = () => {
     const atBottom =
       container.scrollHeight - container.scrollTop === container.clientHeight;
 
-    if (atBottom) {
-      setIsAutoScrolling(true);
+    if (!atBottom) {
+      setShowScrollToBottomButton(true);
     } else {
-      setIsAutoScrolling(false);
+      setShowScrollToBottomButton(false);
     }
+  };
 
-    // Check if the user is interacting (scrolling manually)
-    if (container.scrollTop < container.scrollHeight - container.clientHeight) {
-      setIsUserInteracting(true);
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      setShowScrollToBottomButton(false);
     }
   };
 
   useEffect(() => {
-    if (chatContainerRef.current && isAutoScrolling && !isUserInteracting) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      chatContainer.addEventListener("scroll", handleScroll);
+      return () => chatContainer.removeEventListener("scroll", handleScroll);
     }
-  }, [messages, isAutoScrolling, isUserInteracting]);
+  }, []);
 
   useEffect(() => {
-    // Reset isUserInteracting when reaching the bottom
     if (chatContainerRef.current) {
-      const container = chatContainerRef.current;
-      if (
-        container.scrollHeight - container.scrollTop === container.clientHeight
-      ) {
-        setIsUserInteracting(false);
-      }
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -150,12 +144,12 @@ const ChatComponent = () => {
   }, [isLoading]);
 
   const renderMessageContent = (content, isAi) => {
-    
+
     // Copy-to-clipboard function
     const handleCopy = (text) => {
       navigator.clipboard.writeText(text).then(() => {
         // console.log("Response copied to clipboard!");
-        setShowToast(true); 
+        setShowToast(true);
 
         // Hide toast after 3 seconds
         setTimeout(() => setShowToast(false), 3000);
@@ -163,15 +157,14 @@ const ChatComponent = () => {
         console.error("Failed to copy text:", err);
       });
     };
-  
-  
+
+
     return (
       <div
-        className={`whitespace-pre-wrap break-words ${
-          isAi
-            ? "bg-gray-800 text-white rounded-lg shadow-md"
-            : "bg-gray-300 text-black rounded-lg shadow-md p-4"
-        }`}
+        className={`whitespace-pre-wrap break-words ${isAi
+          ? "bg-gray-800 text-white rounded-lg shadow-md"
+          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
+          }`}
         style={{
           fontFamily: "Cantarell, serif",
         }}
@@ -192,29 +185,39 @@ const ChatComponent = () => {
             </button>
           </div>
         )}
-  
+
         {/* Render Markdown Content */}
-        <div className="p-4 mt-0 mb-0">
+        <div className="px-4 py-2 mt-0 mb-0">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
             components={{
               code({ node, inline, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || ""); // Detect language
+                const codeContent = String(children).replace(/\n$/, ""); // Ensure code content is clean
+
                 return !inline && match ? (
-                  <SyntaxHighlighter
-                    style={oneDark}
-                    language={match[1]}
-                    PreTag="div"
-                    {...props}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
+                  <div className="relative group">
+                    <SyntaxHighlighter
+                      style={oneDark}
+                      language={match[1]}
+                      PreTag="div"
+                      {...props}
+                    >
+                      {codeContent}
+                    </SyntaxHighlighter>
+                    {/* Button to copy individual code block */}
+                    <button
+                      onClick={() => handleCopy(codeContent)}
+                      className="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Copy Code
+                    </button>
+                  </div>
                 ) : (
                   <code
-                    className={`bg-gray-200 text-gray-800 rounded-md px-1 py-0.5 ${
-                      inline ? "text-sm" : ""
-                    }`}
+                    className={`bg-gray-200 text-gray-800 rounded-md px-1 py-0.5 ${inline ? "text-sm" : ""
+                      }`}
                     {...props}
                   >
                     {children}
@@ -222,7 +225,7 @@ const ChatComponent = () => {
                 );
               },
               table: ({ children }) => (
-                <div className="overflow-x-auto -mt-[110%]">
+                <div className="overflow-x-auto">
                   <table className="min-w-full border border-gray-700 divide-y divide-gray-700 bg-gray-500 shadow-sm rounded-lg overflow-hidden">
                     {children}
                   </table>
@@ -247,7 +250,14 @@ const ChatComponent = () => {
           >
             {content}
           </ReactMarkdown>
+
+          {showToast && (
+            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-2 rounded-md">
+              Copied to clipboard!
+            </div>
+          )}
         </div>
+
       </div>
     );
   };
@@ -280,7 +290,7 @@ const ChatComponent = () => {
         <div className="fixed top-5 right-5 z-50">
           <div className="flex items-center bg-green-200 text-white text-sm font-bold px-4 py-3 rounded shadow-md border-2 border-green-600" role="alert">
             <img src={Check} className="h-6 w-6 rounded-full mr-2" alt="Check Icon" />
-            <span className="text-green-800">Response copied to clipboard!</span>
+            <span className="text-green-800">Copied to clipboard!</span>
           </div>
         </div>
       )}
@@ -364,12 +374,13 @@ const ChatComponent = () => {
 
       {/* Chat Messages Container */}
       <div
-        className="max-h-2/3 flex-1 overflow-auto mx-6 p-4 md:p-6 rounded-lg bg-white/80 text-white space-y-4 shadow-lg scrollbar-hide"
+        className="max-h-2/3 flex-1 mb-2 overflow-auto mx-6 rounded-lg text-white space-y-4 scrollbar-hide"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {messages.length > 0 ? (messages.map((message, index) => (
           <div
+            id="message"
             key={index}
             className={`flex flex-col space-y-1 ${message.type === "user"
               ? "items-end text-right"
@@ -401,15 +412,15 @@ const ChatComponent = () => {
                 /ZMoIUxrYGjRHs/di2nbdzDZxIb1maPriold3QlyFJCAonMd08A7/WhkN19
                 PWDolSeiXU7URWPm8S3ewMCuvGpB+kigVXvWZKlgIVycF0Hjl6DIoVRCGKz
                 9pE8W0QKXkgkIEmjzUDuh11TSuVkn348DLHs1Y7/kzTi+ksX8GLn0wBRrdv
-                CQS949C43fstj6FhfM8Unfqqwv3gf3+/kDMJgHC0kwnjEAAAAASUVORK5CYII=" 
-                className="w-10 h-10" alt="" />
+                CQS949C43fstj6FhfM8Unfqqwv3gf3+/kDMJgHC0kwnjEAAAAASUVORK5CYII="
+                  className="w-10 h-10" alt="" />
               )}
             </div>
 
             {/* Chat Message Bubble */}
             <div
-              className={`text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
-                ? "bg-gray-500 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
+              className={`border-2 border-gray-400 text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
+                ? "bg-gray-700 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
                 : message.error
                   ? "bg-red-400 text-red-400 w-max"
                   : "bg-gray-800 text-white w-max"
@@ -436,14 +447,24 @@ const ChatComponent = () => {
           </div>
         ))) : (
           <div className="flex justify-center items-center h-full w-full">
-            <p className="text-gray-800 text-lg">
+            <p className="text-gray-300 text-lg">
               Welcome! Choose a model to begin your conversation with ChatMorph
               and explore the possibilities.
             </p>
           </div>
         )}
-
       </div>
+      {/* Scroll to Bottom Button */}
+      {showScrollToBottomButton && (
+        <div className="w-full flex justify-center">
+          <button
+            onClick={scrollToBottom}
+            className="w-6 h-6 z-50 -mt-10 bg-gray-200 text-gray-800 rounded-full"
+          >
+            <ArrowDown />
+          </button>
+        </div>
+      )}
 
       {/* Input Section */}
       <form
