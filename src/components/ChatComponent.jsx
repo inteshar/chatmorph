@@ -33,6 +33,12 @@ const ChatComponent = () => {
   const inputRef = useRef(null);
   const [showToast, setShowToast] = useState(false);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
+  const [theme, setTheme] = useState('light');
+
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,34 +149,12 @@ const ChatComponent = () => {
     }
   }, [isLoading]);
 
-  useEffect(() => {
-    const disablePullToRefresh = (evt) => {
-      // Only prevent default behavior if the user is at the top of the page
-      if (window.scrollY === 0 && evt.touches.length > 0) {
-        evt.preventDefault(); // Prevent pull-to-refresh only when at the top of the page
-      }
-    };
-  
-    // Add event listeners for touchstart and touchmove to prevent pull-to-refresh
-    document.body.addEventListener('touchmove', disablePullToRefresh, { passive: false });
-  
-    return () => {
-      // Cleanup the event listeners on component unmount
-      document.body.removeEventListener('touchmove', disablePullToRefresh);
-    };
-  }, []);
-  
-  
 
   const renderMessageContent = (content, isAi) => {
 
-    // Copy-to-clipboard function
     const handleCopy = (text) => {
       navigator.clipboard.writeText(text).then(() => {
-        // console.log("Response copied to clipboard!");
         setShowToast(true);
-
-        // Hide toast after 3 seconds
         setTimeout(() => setShowToast(false), 3000);
       }).catch((err) => {
         console.error("Failed to copy text:", err);
@@ -181,8 +165,8 @@ const ChatComponent = () => {
     return (
       <div
         className={`whitespace-pre-wrap break-words ${isAi
-          ? "bg-gray-800 text-white rounded-lg shadow-md"
-          : "bg-gray-300 text-black rounded-lg shadow-md p-4"
+          ? "bg-slate-800 text-white rounded-lg shadow-md"
+          : "bg-slate-300 text-black rounded-lg shadow-md p-4"
           }`}
         style={{
           fontFamily: "Cantarell, serif",
@@ -190,11 +174,11 @@ const ChatComponent = () => {
       >
         {/* AI Response Header */}
         {isAi && content !== "Thinking..." && (
-          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-md rounded-tl-none shadow-lg">
-            <h6 className="text-gray-800 font-semibold text-md">Response</h6>
+          <div className="flex justify-between px-2 items-center h-8 w-full bg-slate-400 rounded-t-md rounded-tl-none shadow-lg">
+            <h6 className="text-slate-800 font-semibold text-md">Response</h6>
             <button
               onClick={() => handleCopy(content)}
-              className="flex items-center justify-center transition duration-300 ease-in-out hover:bg-gray-300 rounded-lg"
+              className="flex items-center justify-center transition duration-300 ease-in-out hover:bg-slate-300 rounded-lg"
             >
               <img
                 className="h-5 w-5"
@@ -228,14 +212,14 @@ const ChatComponent = () => {
                     {/* Button to copy individual code block */}
                     <button
                       onClick={() => handleCopy(codeContent)}
-                      className="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      className="absolute top-2 right-2 bg-slate-700 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       Copy Code
                     </button>
                   </div>
                 ) : (
                   <code
-                    className={`bg-gray-200 text-gray-800 rounded-md px-1 py-0.5 ${inline ? "text-sm" : ""
+                    className={`bg-slate-200 text-slate-800 rounded-md px-1 py-0.5 ${inline ? "text-sm" : ""
                       }`}
                     {...props}
                   >
@@ -245,23 +229,23 @@ const ChatComponent = () => {
               },
               table: ({ children }) => (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-700 divide-y divide-gray-700 bg-gray-500 shadow-sm rounded-lg overflow-hidden">
+                  <table className="min-w-full border border-slate-700 divide-y divide-slate-700 bg-slate-500 shadow-sm rounded-lg overflow-hidden">
                     {children}
                   </table>
                 </div>
               ),
               th: ({ children }) => (
-                <th className="px-6 py-3 text-left text-xs font-medium bg-gray-600 text-gray-300 uppercase border border-gray-700">
+                <th className="px-6 py-3 text-left text-xs font-medium bg-slate-600 text-slate-300 uppercase border border-slate-700">
                   {children}
                 </th>
               ),
               td: ({ children }) => (
-                <td className="px-6 py-4 text-sm text-gray-300 border border-gray-700">
+                <td className="px-6 py-4 text-sm text-slate-300 border border-slate-700">
                   {children}
                 </td>
               ),
               tr: ({ children }) => (
-                <tr className="hover:bg-gray-700 transition-colors duration-200 divide-x divide-gray-700">
+                <tr className="hover:bg-slate-700 transition-colors duration-200 divide-x divide-slate-700">
                   {children}
                 </tr>
               ),
@@ -302,7 +286,8 @@ const ChatComponent = () => {
   }, [userMessage]);
 
   return (
-    <div className="h-full flex flex-col justify-between text-white py-6">
+    <div className={`${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-black'
+      } h-full flex flex-col justify-between py-6`}>
 
       {/* Toast */}
       {showToast && (
@@ -316,7 +301,8 @@ const ChatComponent = () => {
 
 
       {/* Header */}
-      <header className="relative -mt-10 z-10 w-full text-center sm:text-start flex items-center justify-between bg-opacity-90 py-4 rounded-lg">
+      <header className={`relative mb-3 -mt-10 z-10 w-full text-center sm:text-start flex items-center justify-between py-4 rounded-lg ${theme === 'dark' ? 'bg-slate-800 border-b border-slate-700' : 'bg-slate-100 border-b border-slate-200'
+        }`}>
 
         <div className="flex flex-row items-center">
           <img
@@ -324,33 +310,57 @@ const ChatComponent = () => {
             src={Logo}
             alt="ChatMorph Logo"
           />
-          <div className="flex flex-col"><h1 className="sm:text-3xl text-2xl font-bold tracking-wide text-white">
+          <div className="flex flex-col"><h1 className={`sm:text-3xl text-2xl font-bold tracking-wide ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
             ChatMorph
           </h1>
-            <h2 className="hidden sm:block text-md font-semibold text-gray-400 mt-2">
+            <h2 className={`hidden sm:block text-md font-semibold mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-800'}`}>
               Connect with top AI models and explore endless possibilities. Ask,
               share, or chat with AI personalities tailored to your needs.
             </h2></div>
         </div>
-        <button className="btn bg-transparent border-none text-lg sm:text-3xl" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
+        <div className="px-4 flex flex-row items-center justify-evenly">
+          <label className="swap swap-rotate">
+            <input type="checkbox" onClick={toggleTheme} className="theme-controller" value="synthwave" />
+
+            {/* sun icon */}
+            <svg
+              className="swap-off h-6 w-6 fill-current text-slate-800"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
+            </svg>
+
+            {/* moon icon */}
+            <svg
+              className="swap-on h-6 w-6 fill-current text-slate-300"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z" />
+            </svg>
+          </label>
+          <button className={`btn bg-transparent shadow-none border-none text-lg sm:text-3xl hover:bg-transparent ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`} onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
+        </div>
+
         <dialog id="my_modal_1" className="modal text-start">
           <div className="modal-box">
             <div className="flex justify-between items-center"><h3 className="font-bold text-lg text-primary">About ChatMorph</h3><form method="dialog">
               <button className="btn">Close</button>
             </form></div>
-            <p className="py-4 text-base text-gray-400">
+            <p className="py-4 text-base text-slate-400">
               ChatMorph is an interactive AI chat application that connects users with top-tier AI models, including Mistral and Gemini. It allows users to ask questions, share thoughts, and explore endless possibilities in conversations with tailored AI personalities. With a seamless and engaging interface, ChatMorph provides real-time responses, accompanied by progress feedback, ensuring an intuitive and responsive user experience. Whether for casual chats or deep discussions, ChatMorph brings the power of advanced AI to your fingertips.
             </p>
 
             <h4 className="font-semibold text-md text-secondary mt-6">Instructions for Using ChatMorph</h4>
 
-            <ol className="list-decimal pl-6 space-y-4 text-gray-400 text-sm">
+            <ol className="list-decimal pl-6 space-y-4 text-slate-400 text-sm">
               <li>
                 <strong>Start a Conversation:</strong> Open the ChatMorph app, and you’ll be greeted with a welcoming message. To begin, type your message in the text input field at the bottom of the screen.
               </li>
               <li>
                 <strong>Choose an AI Model:</strong> Select your preferred AI model from the dropdown menu next to the text input. Available models include:
-                <ul className="ml-6 list-disc text-gray-400 text-sm">
+                <ul className="ml-6 list-disc text-slate-400 text-sm">
                   <li><strong>Mistral</strong></li>
                   <li><strong>Gemini</strong></li>
                 </ul>
@@ -375,12 +385,12 @@ const ChatComponent = () => {
               </li>
             </ol>
 
-            <p className="mt-6 text-gray-400 text-base">
+            <p className="mt-6 text-slate-400 text-base">
               Enjoy your conversations with ChatMorph and explore endless possibilities with AI!
             </p>
-            <div className="mt-6 bg-gray-800 p-4 rounded-lg space-y-2">
-              <p className="text-gray-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
-              <span className="text-gray-400 text-sm">
+            <div className="mt-6 bg-slate-800 p-4 rounded-lg space-y-2">
+              <p className="text-slate-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
+              <span className="text-slate-400 text-sm">
                 Need help or have a complaint? Reach out to me on&nbsp;
                 <a href="https://inteshar.github.io/" target="_blank" className="text-primary">
                   https://inteshar.github.io/
@@ -393,7 +403,8 @@ const ChatComponent = () => {
 
       {/* Chat Messages Container */}
       <div
-        className="max-h-2/3 flex-1 mb-2 overflow-auto mx-6 rounded-lg text-white space-y-4 scrollbar-hide"
+        className={`max-h-2/3 flex-1 mb-2 overflow-auto mx-6 rounded-lg space-y-4 scrollbar-hide ${theme === 'dark' ? 'text-white' : 'text-black'
+          }`}
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
@@ -408,10 +419,11 @@ const ChatComponent = () => {
           >
             {/* Chat Title */}
             <div
-              className={`flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${message.type === "user"
-                ? "bg-gray-700 text-white rounded-r-full rounded-tl-full"
-                : "bg-white text-white rounded-l-full rounded-tr-full"
-                }`}
+              className={`text-slate-200 flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${
+                message.type === "user"
+                  ? `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-slate-700 rounded-r-full rounded-tl-full`
+                  : `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-white rounded-l-full rounded-tr-full`
+              }`}
             >
               {message.type === "user" ? (
                 "Me"
@@ -438,11 +450,11 @@ const ChatComponent = () => {
 
             {/* Chat Message Bubble */}
             <div
-              className={`border-2 border-gray-400 text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
-                ? "bg-gray-700 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
+              className={`border-2 border-slate-400 text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
+                ? "bg-slate-700 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
                 : message.error
                   ? "bg-red-400 text-red-400 w-max"
-                  : "bg-gray-800 text-white w-max"
+                  : "bg-slate-800 text-white w-max"
                 }`}
             >
               {message.type === "user"
@@ -466,7 +478,7 @@ const ChatComponent = () => {
           </div>
         ))) : (
           <div className="flex justify-center items-center h-full w-full">
-            <p className="text-gray-300 text-lg">
+            <p className={`text-slate-300 text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-slate-800'}`}>
               Welcome! Choose a model to begin your conversation with ChatMorph
               and explore the possibilities.
             </p>
@@ -478,7 +490,7 @@ const ChatComponent = () => {
         <div className="w-full flex justify-center">
           <button
             onClick={scrollToBottom}
-            className="w-6 h-6 z-50 -mt-10 bg-gray-200 text-gray-800 rounded-full"
+            className="w-6 h-6 z-50 -mt-10 bg-slate-200 text-slate-800 rounded-full"
           >
             <ArrowDown />
           </button>
@@ -487,22 +499,52 @@ const ChatComponent = () => {
 
       {/* Input Section */}
       <form
-        className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl shadow-xl"
+        className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl shadow-xl"
         onSubmit={handleSubmit}
       >
         <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
+          
           {/* Model Selection */}
           <div className="w-full sm:w-32">
-            <select
-              value={modelType}
-              onChange={(e) => setModelType(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
-            >
-              <option value="mistral" className="bg-gray-800">Mistral Lg. Latest</option>
-              <option value="gemini" className="bg-gray-800">Gemini 1.5 flash</option>
-              {/* <option value="claude" className="bg-gray-800">Claude</option> */}
-              {/* <option value="gpt" className="bg-gray-800">GPT</option> */}
-            </select>
+            <div className="dropdown">
+              <summary tabIndex={0} className={`btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
+              <ul tabIndex={0} className={`menu dropdown-content rounded-box z-[1] w-52 p-2 shadow absolute bottom-full mb-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
+                <li>
+                  <a
+                    onClick={() => setModelType('mistral')}
+                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                  >
+                    Mistral Lg. Latest
+                  </a>
+                </li>
+                <li>
+                  <a
+                    onClick={() => setModelType('gemini')}
+                    className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+                  >
+                    Gemini 1.5 flash
+                  </a>
+                </li>
+                {/* Uncomment the options you want to use */}
+                {/* <li>
+      <a 
+        onClick={() => setModelType('claude')} 
+        className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+      >
+        Claude
+      </a>
+    </li> */}
+                {/* <li>
+      <a 
+        onClick={() => setModelType('gpt')} 
+        className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
+      >
+        GPT
+      </a>
+    </li> */}
+              </ul>
+            </div>
+
           </div>
 
           {/* Input Field Container */}
@@ -515,7 +557,7 @@ const ChatComponent = () => {
               placeholder="Type your message..."
               rows="1"
               disabled={isLoading}
-              className="w-full bg-gray-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 transition-all duration-200"
+              className="w-full bg-slate-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-400 transition-all duration-200"
               style={{
                 overflow: 'hidden',
                 lineHeight: '1.5'
@@ -535,7 +577,7 @@ const ChatComponent = () => {
 
         {/* Character Count */}
         <div className="px-4 py-1 text-right">
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-slate-400">
             {userMessage.length} characters |
             {userMessage.trim().split(/\s+/).filter(Boolean).length} words |
             {userMessage.trim().split(/(?<=[.!?])\s+/).filter(Boolean).length} sentences |
