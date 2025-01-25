@@ -171,7 +171,7 @@ const ChatComponent = () => {
       >
         {/* AI Response Header */}
         {isAi && content !== "Thinking..." && (
-          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-lg shadow-lg">
+          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-md shadow-lg">
             <h6 className="text-gray-800 font-semibold text-md">Response</h6>
             <button
               onClick={() => handleCopy(content)}
