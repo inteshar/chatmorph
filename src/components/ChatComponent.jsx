@@ -484,7 +484,7 @@ const ChatComponent = () => {
 
             {/* Chat Message Bubble */}
             <div
-              className={`border-2 border-slate-400 text-sm max-h-max max-w-full rounded-lg ${message.type === "user"
+              className={`text-sm max-h-max max-w-full rounded-lg ${theme==="dark"? 'border-2 border-slate-400':'border-none'} ${message.type === "user"
                 ? "bg-slate-700 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
                 : message.error
                   ? "bg-red-400 text-red-400 w-max"
