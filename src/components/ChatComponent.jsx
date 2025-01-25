@@ -143,6 +143,20 @@ const ChatComponent = () => {
     }
   }, [isLoading]);
 
+  useEffect(() => {
+    const disablePullToRefresh = (evt) => {
+      if (evt.cancelable) {
+        evt.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchstart', disablePullToRefresh, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', disablePullToRefresh);
+    };
+  }, []);
+
   const renderMessageContent = (content, isAi) => {
 
     // Copy-to-clipboard function
