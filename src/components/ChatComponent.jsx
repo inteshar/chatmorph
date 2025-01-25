@@ -171,7 +171,7 @@ const ChatComponent = () => {
       >
         {/* AI Response Header */}
         {isAi && content !== "Thinking..." && (
-          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-md shadow-lg">
+          <div className="flex justify-between px-2 items-center h-8 w-full bg-gray-400 rounded-t-md rounded-tl-none shadow-lg">
             <h6 className="text-gray-800 font-semibold text-md">Response</h6>
             <button
               onClick={() => handleCopy(content)}
@@ -389,9 +389,9 @@ const ChatComponent = () => {
           >
             {/* Chat Title */}
             <div
-              className={`flex items-center justify-center w-10 h-10 px-3 py-1 rounded-full text-sm ${message.type === "user"
-                ? "bg-gray-700 text-white"
-                : "bg-white text-white"
+              className={`flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${message.type === "user"
+                ? "bg-gray-700 text-white rounded-r-full rounded-tl-full"
+                : "bg-white text-white rounded-l-full rounded-tr-full"
                 }`}
             >
               {message.type === "user" ? (
