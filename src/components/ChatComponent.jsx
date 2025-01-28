@@ -286,37 +286,26 @@ const ChatComponent = () => {
     );
   };
 
-// Internet Access Status Check
-  const checkInternetAccess = async () => {
-    try {
-      const response = await fetch("https://www.google.com/generate_204", { mode: "no-cors" });
-      setNetworkStatus("online");
-    } catch (error) {
-      setNetworkStatus("offline");
+  // Internet Access Status Check
+  const checkNetworkStatus = async () => {
+    if (!navigator.onLine) {
+      setNetworkStatus("offline"); 
+    } else {
+      try {
+        await fetch("https://www.google.com/generate_204", { mode: "no-cors" });
+        setNetworkStatus("online"); 
+      } catch (error) {
+        setNetworkStatus("offline");
+      }
     }
   };
 
-  // Check network status
   useEffect(() => {
-    const updateNetworkStatus = () => {
-      if (!navigator.onLine) {
-        setNetworkStatus("offline");
-      } else {
-        checkInternetAccess();
-      }
-    };
+    checkNetworkStatus();
 
-    // Initial check
-    updateNetworkStatus();
+    const intervalId = setInterval(checkNetworkStatus, 1000);
 
-    // Listen for network status changes
-    window.addEventListener("offline", () => setNetworkStatus("offline"));
-    window.addEventListener("online", updateNetworkStatus);
-
-    return () => {
-      window.removeEventListener("offline", () => setNetworkStatus("offline"));
-      window.removeEventListener("online", updateNetworkStatus);
-    };
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleKeyDown = (event) => {
