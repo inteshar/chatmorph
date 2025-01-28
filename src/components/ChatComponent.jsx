@@ -35,7 +35,7 @@ const ChatComponent = () => {
   const [showToast, setShowToast] = useState(false);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const [theme, setTheme] = useState('light');
-  const [networkStatus, setNetworkStatus] = useState("");
+  const [networkStatus, setNetworkStatus] = useState("checking");
 
 
   // Toggle theme between 'light' and 'dark'
@@ -286,22 +286,37 @@ const ChatComponent = () => {
     );
   };
 
+// Internet Access Status Check
+  const checkInternetAccess = async () => {
+    try {
+      const response = await fetch("https://www.google.com/generate_204", { mode: "no-cors" });
+      setNetworkStatus("online");
+    } catch (error) {
+      setNetworkStatus("offline");
+    }
+  };
 
   // Check network status
   useEffect(() => {
-    if (navigator.onLine) {
-      setNetworkStatus("online");
-    } else {
-      setNetworkStatus("offline");
-    }
+    const updateNetworkStatus = () => {
+      if (!navigator.onLine) {
+        setNetworkStatus("offline");
+      } else {
+        checkInternetAccess();
+      }
+    };
 
-    window.addEventListener("offline", (e) => {
-      setNetworkStatus("offline");
-    });
+    // Initial check
+    updateNetworkStatus();
 
-    window.addEventListener("online", (e) => {
-      setNetworkStatus("online");
-    });
+    // Listen for network status changes
+    window.addEventListener("offline", () => setNetworkStatus("offline"));
+    window.addEventListener("online", updateNetworkStatus);
+
+    return () => {
+      window.removeEventListener("offline", () => setNetworkStatus("offline"));
+      window.removeEventListener("online", updateNetworkStatus);
+    };
   }, []);
 
   const handleKeyDown = (event) => {
