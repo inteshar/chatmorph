@@ -1,27 +1,22 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, ArrowDown, WifiOff } from "lucide-react";
-
-
+import { Send, ArrowDown, WifiOff, Moon, Sun, Info, Copy, Check, X } from "lucide-react";
 import { getMistralResponse } from "../services/mistralService";
 import { getGeminiResponse } from "../services/geminiService";
-// import { claudeService } from "../services/claudeService";
-// import { gptService } from "../services/gptService";
-
-
-// import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import Cookies from "js-cookie";
-
-
 import Logo from "../assets/logo.png";
 import MistralLogo from "../assets/mistralLogo.svg";
 import GeminiLogo from "../assets/geminiLogo.svg";
 import GptLogo from "../assets/openaiLogo.svg";
-import Check from "../assets/check.gif";
+
+const MODEL_OPTIONS = [
+  { id: "mistral", label: "Mistral", sublabel: "Large Latest", logo: MistralLogo, color: "#FF7000" },
+  { id: "gemini", label: "Gemini", sublabel: "1.5 Flash", logo: GeminiLogo, color: "#4285F4" },
+];
 
 const ChatComponent = () => {
   const [userMessage, setUserMessage] = useState("");
@@ -32,604 +27,707 @@ const ChatComponent = () => {
   const [conversationContext, setConversationContext] = useState([]);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
-  const [showToast, setShowToast] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState("light");
   const [networkStatus, setNetworkStatus] = useState("checking");
+  const [showInfo, setShowInfo] = useState(false);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
 
-
-  // Toggle theme between 'light' and 'dark'
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light"; // Determine the new theme
-    handleThemeChange(newTheme); // Pass the new theme directly
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    Cookies.set("theme", newTheme, { expires: 30, SameSite: "Lax" });
+    document.documentElement.setAttribute("data-theme", newTheme);
   };
 
-  // Handle theme change and apply it
-  const handleThemeChange = (selectedTheme) => {
-    setTheme(selectedTheme);
-    Cookies.set("theme", selectedTheme, {
-      expires: 30,
-      SameSite: "Lax"  // Set the SameSite attribute
-    }); // Save theme in cookie for 30 days
-    document.documentElement.setAttribute("data-theme", selectedTheme); // Apply theme
-  };
-
-  // Load theme from cookie on component mount
   useEffect(() => {
     const savedTheme = Cookies.get("theme") || "light";
     setTheme(savedTheme);
-    document.documentElement.setAttribute("data-theme", savedTheme); // Apply theme
+    document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!userMessage.trim()) return;
+    e?.preventDefault();
+    if (!userMessage.trim() || isLoading) return;
 
     const newUserMessage = userMessage;
     setUserMessage("");
 
-    const updatedContext = [
-      ...conversationContext,
-      { role: "user", content: newUserMessage }
-    ];
+    const updatedContext = [...conversationContext, { role: "user", content: newUserMessage }];
     setConversationContext(updatedContext);
-
     setMessages((prev) => [
       ...prev,
-      { type: "user", content: newUserMessage }
-    ]);
-    setMessages((prev) => [
-      ...prev,
-      { type: "ai", content: "Thinking...", model: modelType },
+      { type: "user", content: newUserMessage },
+      { type: "ai", content: "thinking", model: modelType },
     ]);
     setIsLoading(true);
     setProgress(0);
 
     const interval = setInterval(() => {
-      setProgress((prevProgress) => {
-        if (prevProgress < 90) return prevProgress + 1;
-        return prevProgress;
-      });
-    }, 100);
+      setProgress((p) => (p < 88 ? p + 1.2 : p));
+    }, 80);
 
     try {
       let response;
-      if (modelType === "mistral") {
-        response = await getMistralResponse(updatedContext);
-      } else if (modelType === "gemini") {
-        response = await getGeminiResponse(updatedContext);
-      } else if (modelType === "claude") {
-        response = await claudeService(newUserMessage);
-      }
+      if (modelType === "mistral") response = await getMistralResponse(updatedContext);
+      else if (modelType === "gemini") response = await getGeminiResponse(updatedContext);
 
       const updatedFullContext = [
         ...updatedContext,
-        { role: "assistant", content: response || "No response received" }
+        { role: "assistant", content: response || "No response received" },
       ];
       setConversationContext(updatedFullContext);
-
       clearInterval(interval);
       setProgress(100);
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { type: "ai", content: response || "No response received", model: modelType },
       ]);
-      setIsLoading(false);
-    } catch (error) {
+    } catch {
       clearInterval(interval);
       setProgress(100);
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        {
-          type: "ai",
-          content: "Error fetching response",
-          error: true,
-          model: modelType,
-        },
+        { type: "ai", content: "Something went wrong. Please try again.", error: true, model: modelType },
       ]);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleScroll = () => {
-    const container = chatContainerRef.current;
-    const atBottom =
-      container.scrollHeight - container.scrollTop === container.clientHeight;
+  const handleCopy = (text, id) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
 
-    if (!atBottom) {
-      setShowScrollToBottomButton(true);
-    } else {
-      setShowScrollToBottomButton(false);
-    }
+  const handleScroll = () => {
+    const c = chatContainerRef.current;
+    setShowScrollToBottomButton(c.scrollHeight - c.scrollTop > c.clientHeight + 40);
   };
 
   const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      setShowScrollToBottomButton(false);
-    }
+    chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: "smooth" });
+    setShowScrollToBottomButton(false);
   };
 
   useEffect(() => {
-    const chatContainer = chatContainerRef.current;
-    if (chatContainer) {
-      chatContainer.addEventListener("scroll", handleScroll);
-      return () => chatContainer.removeEventListener("scroll", handleScroll);
-    }
+    const c = chatContainerRef.current;
+    if (c) { c.addEventListener("scroll", handleScroll); return () => c.removeEventListener("scroll", handleScroll); }
   }, []);
 
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+    chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    if (!isLoading && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (!isLoading) inputRef.current?.focus();
   }, [isLoading]);
 
+  useEffect(() => {
+    const ta = inputRef.current;
+    if (ta) { ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`; }
+  }, [userMessage]);
 
-  const renderMessageContent = (content, isAi) => {
-
-    const handleCopy = (text) => {
-      navigator.clipboard.writeText(text).then(() => {
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-      }).catch((err) => {
-        console.error("Failed to copy text:", err);
-      });
-    };
-
-
-    return (
-      <div
-        className={`whitespace-pre-wrap break-words ${isAi
-          ? "bg-slate-800 text-white rounded-lg shadow-md"
-          : "bg-slate-300 text-black rounded-lg shadow-md p-4"
-          }`}
-        style={{
-          fontFamily: "Cantarell, serif",
-        }}
-      >
-        {/* AI Response Header */}
-        {isAi && content !== "Thinking..." && (
-          <div className="flex justify-between px-2 items-center h-8 w-full bg-slate-400 rounded-t-md rounded-tl-none shadow-lg">
-            <h6 className="text-slate-800 font-semibold text-md">Response</h6>
-            <button
-              onClick={() => handleCopy(content)}
-              className="flex items-center justify-center transition duration-300 ease-in-out hover:bg-slate-300 rounded-lg"
-            >
-              <img
-                className="h-5 w-5"
-                src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABtElEQVR4nO2ZvytGURjHP6SQQiwMzH4W/gKDQRkoZLIZZJP3DOoNIZGdRCmTsDJJFpvFSCySlEQUBr+6ddTTrVt0znl19XzqqfeeW9+n7znf9w7PAUVRlB9SBWSBPeDYQ+0Di0ADOWQAeAI+A9QbMAXkhTbRaZt9Bq7xkCYKgAvR7A6YsCfU71ijwJnQfgVqQhlpjzVq8qxfBlyKHhnf4m3294hockgYFkWPdV+irXaHjH02oskWYTC+e1QCN1Yw1UbGhGCqjWz8FyNbasQNoyeSgEbLEaPRSkCj5YjRaCWg0XLEaLQS0Gg5YjRaCWi0HDEarV9EKyPWtknxiQyJtWjwHIJl0WPFh+CqEJyxay2x+WwvfmmMDcejjXNmWgjuiPUjsf4B7Nrp4LxjbQLPQvvWTjm9TN2/RR+BUrteDzwEnsS/A914ohC4F+Jz4l00vD4JZOIK6MIz2dgu9Yh3+UAHMGn/oCuONQv0AcUEoAQ4FWberLkiUkhdLGJRXQNLwLCHC57vqs2FmcbYTZXvOrennxPKgQXgxbOJ6DPbzB9QAQwCa45X0wf2S1j9FyYURSFdfAGHpe1Zdfn2qgAAAABJRU5ErkJggg=="
-                alt="copy-icon"
-              />
-            </button>
-          </div>
-        )}
-
-        {/* Render Markdown Content */}
-        <div className="px-4 py-2 mt-0 mb-0">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={{
-              code({ node, inline, className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || ""); // Detect language
-                const codeContent = String(children).replace(/\n$/, ""); // Ensure code content is clean
-
-                return !inline && match ? (
-                  <div className="relative group">
-                    <SyntaxHighlighter
-                      style={oneDark}
-                      language={match[1]}
-                      PreTag="div"
-                      {...props}
-                    >
-                      {codeContent}
-                    </SyntaxHighlighter>
-                    {/* Button to copy individual code block */}
-                    <button
-                      onClick={() => handleCopy(codeContent)}
-                      className="absolute top-2 right-2 bg-slate-700 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    >
-                      Copy Code
-                    </button>
-                  </div>
-                ) : (
-                  <code
-                    className={`bg-slate-200 text-slate-800 rounded-md px-1 py-0.5 ${inline ? "text-sm" : ""
-                      }`}
-                    {...props}
-                  >
-                    {children}
-                  </code>
-                );
-              },
-              table: ({ children }) => (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-slate-700 divide-y divide-slate-700 bg-slate-500 shadow-sm rounded-lg overflow-hidden">
-                    {children}
-                  </table>
-                </div>
-              ),
-              th: ({ children }) => (
-                <th className="px-6 py-3 text-left text-xs font-medium bg-slate-600 text-slate-300 uppercase border border-slate-700">
-                  {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="px-6 py-4 text-sm text-slate-300 border border-slate-700">
-                  {children}
-                </td>
-              ),
-              tr: ({ children }) => (
-                <tr className="hover:bg-slate-700 transition-colors duration-200 divide-x divide-slate-700">
-                  {children}
-                </tr>
-              ),
-            }}
-          >
-            {content}
-          </ReactMarkdown>
-
-          {showToast && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-2 rounded-md">
-              Copied to clipboard!
-            </div>
-          )}
-        </div>
-
-      </div>
-    );
-  };
-
-  // Internet Access Status Check
   const checkNetworkStatus = async () => {
-    if (!navigator.onLine) {
-      setNetworkStatus("offline"); 
-    } else {
-      try {
-        await fetch("https://www.google.com/generate_204", { mode: "no-cors" });
-        setNetworkStatus("online"); 
-      } catch (error) {
-        setNetworkStatus("offline");
-      }
-    }
+    if (!navigator.onLine) { setNetworkStatus("offline"); return; }
+    try {
+      await fetch("https://www.google.com/generate_204", { mode: "no-cors" });
+      setNetworkStatus("online");
+    } catch { setNetworkStatus("offline"); }
   };
 
   useEffect(() => {
     checkNetworkStatus();
-
-    const intervalId = setInterval(checkNetworkStatus, 1000);
-
-    return () => clearInterval(intervalId);
+    const id = setInterval(checkNetworkStatus, 5000);
+    return () => clearInterval(id);
   }, []);
 
-  const handleKeyDown = (event) => {
-    const isLargeScreen = window.innerWidth >= 640;
-
-    if (isLargeScreen) {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        handleSubmit(event);
-      }
+  const handleKeyDown = (e) => {
+    if (window.innerWidth >= 640 && e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
-  useEffect(() => {
-    const textarea = inputRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      const scrollHeight = textarea.scrollHeight;
-      textarea.style.height = `${scrollHeight}px`;
+  const currentModel = MODEL_OPTIONS.find((m) => m.id === modelType);
+
+  const isDark = theme === "dark";
+
+  const renderMessageContent = (content, isAi, msgIndex) => {
+    if (content === "thinking") {
+      return (
+        <div className="flex items-center gap-2 px-1 py-1">
+          <span style={{ animationDelay: "0ms" }} className="dot-pulse" />
+          <span style={{ animationDelay: "150ms" }} className="dot-pulse" />
+          <span style={{ animationDelay: "300ms" }} className="dot-pulse" />
+        </div>
+      );
     }
-  }, [userMessage]);
 
-  return (
-    <div className={`${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-black'
-      } h-full flex flex-col justify-between py-6`}>
-
-      {/* Toast */}
-      {showToast && (
-        <div className="fixed top-5 right-5 z-50">
-          <div className="flex items-center bg-green-200 text-white text-sm font-bold px-4 py-3 rounded shadow-md border-2 border-green-600" role="alert">
-            <img src={Check} className="h-6 w-6 rounded-full mr-2" alt="Check Icon" />
-            <span className="text-green-800">Copied to clipboard!</span>
-          </div>
-        </div>
-      )}
-
-
-      {/* Header */}
-      <header className={`relative mb-3 -mt-10 z-10 w-full text-center sm:text-start flex items-center justify-between py-4 rounded-lg ${theme === 'dark' ? 'bg-slate-800 border-b border-slate-700' : 'bg-slate-100 border-b border-slate-200'
-        }`}>
-
-        <div className="flex flex-row items-center">
-          <img
-            className="h-12 w-12 md:h-24 md:w-24 rounded-full"
-            src={Logo}
-            alt="ChatMorph Logo"
-          />
-          <div className="flex flex-col"><h1 className={`sm:text-3xl text-2xl font-bold tracking-wide ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-            ChatMorph
-          </h1>
-            <h2 className={`hidden sm:block text-md font-semibold mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-800'}`}>
-              Connect with top AI models and explore endless possibilities. Ask,
-              share, or chat with AI personalities tailored to your needs.
-            </h2></div>
-        </div>
-        <div className={`px-4 flex flex-row items-center justify-evenly ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
-          <label className="swap swap-rotate">
-            <input type="checkbox" onClick={toggleTheme} className="theme-controller" value="synthwave" />
-
-            {theme === 'light' ? <svg
-              className="h-6 w-6 fill-current"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
-            </svg> : <svg
-              className="h-6 w-6 fill-current"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z" />
-            </svg>}
-          </label>
-          <button className="btn font-bold bg-transparent shadow-none border-none text-lg sm:text-3xl hover:bg-transparent" onClick={() => document.getElementById('my_modal_1').showModal()}>ⓘ</button>
-        </div>
-
-        <dialog id="my_modal_1" className="modal text-start">
-          <div className="modal-box">
-            <div className="flex justify-between items-center"><h3 className="font-bold text-lg text-primary">About ChatMorph</h3><form method="dialog">
-              <button className="btn">Close</button>
-            </form></div>
-            <p className="py-4 text-base text-slate-400">
-              ChatMorph is an interactive AI chat application that connects users with top-tier AI models, including Mistral and Gemini. It allows users to ask questions, share thoughts, and explore endless possibilities in conversations with tailored AI personalities. With a seamless and engaging interface, ChatMorph provides real-time responses, accompanied by progress feedback, ensuring an intuitive and responsive user experience. Whether for casual chats or deep discussions, ChatMorph brings the power of advanced AI to your fingertips.
-            </p>
-
-            <h4 className="font-semibold text-md text-secondary mt-6">Instructions for Using ChatMorph</h4>
-
-            <ol className="list-decimal pl-6 space-y-4 text-slate-400 text-sm">
-              <li>
-                <strong>Start a Conversation:</strong> Open the ChatMorph app, and you’ll be greeted with a welcoming message. To begin, type your message in the text input field at the bottom of the screen.
-              </li>
-              <li>
-                <strong>Choose an AI Model:</strong> Select your preferred AI model from the dropdown menu next to the text input. Available models include:
-                <ul className="ml-6 list-disc text-slate-400 text-sm">
-                  <li><strong>Mistral</strong></li>
-                  <li><strong>Gemini</strong></li>
-                </ul>
-              </li>
-              <li>
-                <strong>Send Your Message:</strong> Once you’ve typed your message, press the <strong>Send</strong> button or hit <strong>Enter</strong> on your keyboard (on desktop). The AI model you selected will begin processing your message.
-              </li>
-              <li>
-                <strong>Wait for the AI Response:</strong> As the AI processes your message, a progress bar will appear, indicating how much of the response is ready. This bar will fill up over time until the AI responds. If you need to cancel or stop the response, click the <strong>Stop</strong> button (red "X" icon) while the AI is typing.
-              </li>
-              <li>
-                <strong>View the Response:</strong> When the AI response is ready, the message will appear in the chat, displayed in a clean, easy-to-read format. The AI's response will be shown below your message in a separate bubble.
-              </li>
-              <li>
-                <strong>Continue the Conversation:</strong> To keep the conversation going, simply type a new message and repeat the process. You can switch between AI models anytime by selecting a different model from the dropdown menu.
-              </li>
-              <li>
-                <strong>Scroll through Messages:</strong> Scroll up and down through your previous messages. The app will auto-scroll to the most recent messages, but you can manually scroll if needed. If you scroll up, the auto-scroll feature will pause until you reach the bottom again.
-              </li>
-              <li>
-                <strong>Close the App or Reset:</strong> To exit the conversation or reset the chat, simply close the app or refresh the page. All previous chats will be cleared, and you can start fresh.
-              </li>
-            </ol>
-
-            <p className="mt-6 text-slate-400 text-base">
-              Enjoy your conversations with ChatMorph and explore endless possibilities with AI!
-            </p>
-            <div className="mt-6 bg-slate-800 p-4 rounded-lg space-y-2">
-              <p className="text-slate-400 text-sm">Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) - 2024</p>
-              <span className="text-slate-400 text-sm">
-                Need help or have a complaint? Reach out to me on&nbsp;
-                <a href="https://inteshar.github.io/" target="_blank" className="text-primary">
-                  https://inteshar.github.io/
-                </a>
-              </span>
-            </div>
-          </div>
-        </dialog>
-      </header>
-
-      {/* Chat Messages Container */}
-      <div
-        className={`max-h-2/3 flex-1 mb-2 overflow-auto mx-6 rounded-lg space-y-4 scrollbar-hide ${theme === 'dark' ? 'text-white' : 'text-black'
-          }`}
-        ref={chatContainerRef}
-        onScroll={handleScroll}
-      >
-        {messages.length > 0 ? (messages.map((message, index) => (
-          <div
-            id="message"
-            key={index}
-            className={`flex flex-col space-y-1 ${message.type === "user"
-              ? "items-end text-right"
-              : "items-start text-left"
-              }`}
-          >
-            {/* Chat Title */}
-            <div
-              className={`text-slate-200 flex items-center justify-center w-10 h-10 px-3 py-1 text-sm ${message.type === "user"
-                ? `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-slate-700 rounded-r-full rounded-tl-full`
-                : `${theme === "dark" ? "border border-slate-300" : "border border-slate-800"} bg-white rounded-l-full rounded-tr-full`
-                }`}
-            >
-              {message.type === "user" ? (
-                "Me"
-              ) : message.model === "gemini" ? (
-                <img src={GeminiLogo} className="w-10 h-10" alt="" />
-              ) : message.model === "gpt" ? (
-                <img src={GptLogo} className="w-10 h-10" alt="" />
-              ) : message.model === "mistral" ? (
-                <img src={MistralLogo} className="w-10 h-10" alt="" />
-              ) : (
-                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA
-                ABwAAAAcCAMAAABF0y+mAAAAJFBMVEVHcEzZd1fZd1fZd1fZd1fad1jZd1
-                fZd1fZd1fZd1fZd1fZd1deZDooAAAADHRSTlMA//F3mhLfyjpWsiMDGU5m
-                AAABH0lEQVQokXVSWXbEIAzDuw33v28FJCnpTP3BA6+yRGvbLK39a0F9RUv
-                HZ5CIazZwkm+VpCi1nZP1GpJEnq2NdabzU594N0XpzInRhq/7jvm8wsOjFf
-                VmcQG4guTWZKYL8HSiA1XFHDjgHMqCpKfpNPgIXiZVVvSJ9yazOJARxBiYf
-                /ZMoIUxrYGjRHs/di2nbdzDZxIb1maPriold3QlyFJCAonMd08A7/WhkN19
-                PWDolSeiXU7URWPm8S3ewMCuvGpB+kigVXvWZKlgIVycF0Hjl6DIoVRCGKz
-                9pE8W0QKXkgkIEmjzUDuh11TSuVkn348DLHs1Y7/kzTi+ksX8GLn0wBRrdv
-                CQS949C43fstj6FhfM8Unfqqwv3gf3+/kDMJgHC0kwnjEAAAAASUVORK5CYII="
-                  className="w-10 h-10" alt="" />
-              )}
-            </div>
-
-            {/* Chat Message Bubble */}
-            <div
-              className={`text-sm max-h-max max-w-full rounded-lg ${theme==="dark"? 'border-2 border-slate-400':'border-none'} ${message.type === "user"
-                ? "bg-slate-700 px-4 py-3 text-white shadow-md whitespace-pre-wrap break-words text-justify"
-                : message.error
-                  ? "bg-red-400 text-red-400 w-max"
-                  : "bg-slate-800 text-white w-max"
-                }`}
-            >
-              {message.type === "user"
-                ? message.content
-                : renderMessageContent(
-                  message.content,
-                  message.type === "ai"
-                )}
-            </div>
-
-            {/* Progress Bar for AI Response */}
-            {isLoading && message.type === "ai" && index === messages.length - 1 && (
-              <div className="flex items-center justify-center space-x-2 py-2">
-                <progress
-                  className="progress progress-info w-56 border border-info"
-                  value={progress}
-                  max="100"
-                ></progress>
-              </div>
-            )}
-          </div>
-        ))) : (
-          <div className="flex justify-center items-center h-full w-full">
-            <p className={`text-slate-300 text-lg ${theme === 'dark' ? 'text-slate-400' : 'text-slate-800'}`}>
-              Welcome! Choose a model to begin your conversation with ChatMorph
-              and explore the possibilities.
-            </p>
-          </div>
-        )}
-      </div>
-      {/* Scroll to Bottom Button */}
-      {showScrollToBottomButton && (
-        <div className="w-full flex justify-center">
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-2 gap-4">
+          <span style={{ fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.5 }}>
+            {currentModel?.label} · Response
+          </span>
           <button
-            onClick={scrollToBottom}
-            className="w-6 h-6 z-50 -mt-10 bg-slate-200 text-slate-800 rounded-full"
+            onClick={() => handleCopy(content, `msg-${msgIndex}`)}
+            title="Copy response"
+            style={{
+              display: "flex", alignItems: "center", gap: "4px",
+              fontSize: "0.7rem", opacity: 0.6, transition: "opacity 0.2s",
+              background: "none", border: "none", cursor: "pointer", color: "inherit",
+              padding: "2px 6px", borderRadius: "4px",
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+            onMouseLeave={e => e.currentTarget.style.opacity = "0.6"}
           >
-            <ArrowDown />
+            {copiedId === `msg-${msgIndex}` ? <Check size={12} /> : <Copy size={12} />}
+            {copiedId === `msg-${msgIndex}` ? "Copied" : "Copy"}
           </button>
         </div>
-      )}
-
-      {/* Input Section */}
-      {networkStatus === "online" ?
-        <form
-          className="sticky bottom-0 mx-4 -mb-3 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl shadow-xl"
-          onSubmit={handleSubmit}
-        >
-          <div className="relative flex flex-col sm:flex-row items-center gap-2 p-2">
-
-            {/* Model Selection */}
-            <div className="w-full sm:w-32 pe-2">
-              <div className="dropdown w-full">
-                <summary tabIndex={0} className={`w-full btn m-1 ${theme === 'dark' ? 'bg-slate-800 text-slate-300 border border-slate-300 hover:bg-slate-700' : 'bg-slate-300 text-slate-800 hover:bg-slate-400'}`}>{modelType === 'mistral' ? 'Mistral Lg. Latest' : modelType === 'gemini' ? 'Gemini 1.5 flash' : 'Select Model'}</summary>
-                <ul tabIndex={0} className={`menu dropdown-content rounded-box z-[1] w-52 p-2 shadow absolute bottom-full mb-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-slate-800'}`}>
-                  <li>
-                    <a
-                      onClick={() => setModelType('mistral')}
-                      className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                    >
-                      Mistral Lg. Latest
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      onClick={() => setModelType('gemini')}
-                      className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-                    >
-                      Gemini 1.5 flash
-                    </a>
-                  </li>
-                  {/* Uncomment the options you want to use */}
-                  {/* <li>
-              <a 
-                onClick={() => setModelType('claude')} 
-                className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-              >
-                Claude
-              </a>
-            </li> */}
-                  {/* <li>
-              <a 
-                onClick={() => setModelType('gpt')} 
-                className="bg-slate-800 text-white hover:bg-purple-600 p-2 rounded"
-              >
-                GPT
-              </a>
-            </li> */}
-                </ul>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
+          components={{
+            code({ node, inline, className, children, ...props }) {
+              const match = /language-(\w+)/.exec(className || "");
+              const codeContent = String(children).replace(/\n$/, "");
+              return !inline && match ? (
+                <div style={{ position: "relative", borderRadius: "8px", overflow: "hidden", margin: "12px 0" }} className="group">
+                  <SyntaxHighlighter style={oneDark} language={match[1]} PreTag="div" customStyle={{ borderRadius: "8px", fontSize: "0.82rem", margin: 0 }} {...props}>
+                    {codeContent}
+                  </SyntaxHighlighter>
+                  <button
+                    onClick={() => handleCopy(codeContent, `code-${msgIndex}-${codeContent.slice(0, 10)}`)}
+                    style={{
+                      position: "absolute", top: "8px", right: "8px",
+                      background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer",
+                      color: "#fff", fontSize: "0.7rem", padding: "3px 8px", borderRadius: "4px",
+                    }}
+                  >
+                    {copiedId === `code-${msgIndex}-${codeContent.slice(0, 10)}` ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              ) : (
+                <code style={{ background: "rgba(128,128,128,0.15)", borderRadius: "4px", padding: "1px 5px", fontSize: "0.88em" }} {...props}>
+                  {children}
+                </code>
+              );
+            },
+            table: ({ children }) => (
+              <div style={{ overflowX: "auto", margin: "12px 0", borderRadius: "8px", border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>{children}</table>
               </div>
+            ),
+            th: ({ children }) => (
+              <th style={{ padding: "8px 14px", textAlign: "left", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", borderBottom: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.08)" }}>
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td style={{ padding: "8px 14px", borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.05)" }}>
+                {children}
+              </td>
+            ),
+            p: ({ children }) => <p style={{ marginBottom: "0.75em", lineHeight: "1.7" }}>{children}</p>,
+            ul: ({ children }) => <ul style={{ paddingLeft: "1.4em", marginBottom: "0.75em", lineHeight: "1.7" }}>{children}</ul>,
+            ol: ({ children }) => <ol style={{ paddingLeft: "1.4em", marginBottom: "0.75em", lineHeight: "1.7" }}>{children}</ol>,
+            h1: ({ children }) => <h1 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "0.5em", marginTop: "1em" }}>{children}</h1>,
+            h2: ({ children }) => <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.4em", marginTop: "0.9em" }}>{children}</h2>,
+            h3: ({ children }) => <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.3em", marginTop: "0.8em" }}>{children}</h3>,
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
 
+  /* ─── Design tokens ─── */
+  const tokens = {
+    bg: isDark ? "#0f1117" : "#f5f4f0",
+    surface: isDark ? "#1a1d27" : "#ffffff",
+    surfaceHover: isDark ? "#21253a" : "#f0efe9",
+    border: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
+    text: isDark ? "#e8e6e0" : "#1a1814",
+    muted: isDark ? "rgba(232,230,224,0.45)" : "rgba(26,24,20,0.45)",
+    accent: "#e8643a",
+    accentMuted: isDark ? "rgba(232,100,58,0.15)" : "rgba(232,100,58,0.08)",
+    inputBg: isDark ? "#12141e" : "#f0efe9",
+    userBubble: isDark ? "#1e2130" : "#1a1814",
+    userText: "#ffffff",
+    aiBubble: isDark ? "#1a1d27" : "#ffffff",
+    aiText: isDark ? "#e8e6e0" : "#1a1814",
+  };
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+        * { box-sizing: border-box; }
+
+        .chat-root {
+          font-family: 'DM Sans', sans-serif;
+          background: ${tokens.bg};
+          color: ${tokens.text};
+          height: 100dvh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          transition: background 0.3s, color 0.3s;
+        }
+
+        /* scrollbar */
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: ${tokens.border}; border-radius: 2px; }
+
+        /* thinking dots */
+        .dot-pulse {
+          display: inline-block;
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: ${tokens.accent};
+          animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+          0%, 80%, 100% { opacity: 0.2; transform: scale(0.7); }
+          40% { opacity: 1; transform: scale(1); }
+        }
+
+        /* progress bar */
+        .progress-track {
+          height: 2px;
+          background: ${tokens.border};
+          border-radius: 1px;
+          overflow: hidden;
+        }
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, ${tokens.accent}, #f5a623);
+          border-radius: 1px;
+          transition: width 0.15s ease;
+        }
+
+        /* fade-in for messages */
+        .msg-enter {
+          animation: msgIn 0.28s ease both;
+        }
+        @keyframes msgIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* model dropdown */
+        .model-dropdown {
+          position: absolute;
+          bottom: calc(100% + 6px);
+          left: 0;
+          min-width: 200px;
+          background: ${tokens.surface};
+          border: 1px solid ${tokens.border};
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+          z-index: 100;
+          animation: dropIn 0.16s ease both;
+        }
+        @keyframes dropIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .model-opt {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 14px;
+          cursor: pointer;
+          transition: background 0.15s;
+          font-size: 0.875rem;
+        }
+        .model-opt:hover { background: ${tokens.surfaceHover}; }
+        .model-opt.active { background: ${tokens.accentMuted}; }
+
+        /* info modal backdrop */
+        .modal-backdrop {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,0.5);
+          backdrop-filter: blur(4px);
+          z-index: 200;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; } to { opacity: 1; }
+        }
+        .modal-box {
+          background: ${tokens.surface};
+          border: 1px solid ${tokens.border};
+          border-radius: 20px;
+          max-width: 520px;
+          width: 100%;
+          max-height: 80vh;
+          overflow-y: auto;
+          padding: 28px;
+          animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .pill-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border-radius: 100px;
+          border: 1px solid ${tokens.border};
+          background: ${tokens.surface};
+          color: ${tokens.text};
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.82rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+          white-space: nowrap;
+        }
+        .pill-btn:hover { background: ${tokens.surfaceHover}; border-color: ${tokens.accent}; }
+
+        .send-btn {
+          width: 40px; height: 40px;
+          border-radius: 12px;
+          border: none;
+          background: ${tokens.accent};
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.1s;
+          flex-shrink: 0;
+        }
+        .send-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+        .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        textarea.chat-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          outline: none;
+          resize: none;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.9rem;
+          color: ${tokens.text};
+          line-height: 1.5;
+          min-height: 24px;
+          max-height: 160px;
+          overflow-y: auto;
+          padding: 0;
+        }
+        textarea.chat-input::placeholder { color: ${tokens.muted}; }
+
+        .icon-btn {
+          width: 36px; height: 36px;
+          border-radius: 10px;
+          border: 1px solid ${tokens.border};
+          background: ${tokens.surface};
+          color: ${tokens.text};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+          flex-shrink: 0;
+        }
+        .icon-btn:hover { background: ${tokens.surfaceHover}; border-color: ${tokens.muted}; }
+      `}</style>
+
+      <div className="chat-root">
+
+        {/* ── HEADER ── */}
+        <header style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "16px 24px",
+          borderBottom: `1px solid ${tokens.border}`,
+          background: tokens.bg,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <img src={Logo} alt="ChatMorph" style={{ width: 38, height: 38, borderRadius: "10px" }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "1.05rem", letterSpacing: "-0.02em" }}>ChatMorph</div>
+              <div style={{ fontSize: "0.72rem", color: tokens.muted, marginTop: "1px" }}>
+                Multi-model AI chat
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Network indicator */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              fontSize: "0.72rem", color: networkStatus === "online" ? "#4caf6e" : tokens.muted,
+            }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: networkStatus === "online" ? "#4caf6e" : networkStatus === "offline" ? "#e8643a" : tokens.muted,
+              }} />
+              <span style={{ display: "none" }} className="sm-show">{networkStatus}</span>
             </div>
 
-            {/* Input Field Container */}
-            <div className="relative flex-1 w-full">
+            <button className="icon-btn" onClick={toggleTheme} title="Toggle theme">
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button className="icon-btn" onClick={() => setShowInfo(true)} title="About">
+              <Info size={15} />
+            </button>
+          </div>
+        </header>
+
+        {/* ── MESSAGES ── */}
+        <div
+          ref={chatContainerRef}
+          className="chat-scroll"
+          style={{ flex: 1, overflowY: "auto", padding: "24px 20px", display: "flex", flexDirection: "column", gap: "16px" }}
+        >
+          {messages.length === 0 ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", paddingBottom: "40px" }}>
+              <img src={Logo} alt="ChatMorph" style={{ width: 56, height: 56, borderRadius: "16px", opacity: 0.6 }} />
+              <p style={{ color: tokens.muted, fontSize: "0.9rem", textAlign: "center", maxWidth: "320px", lineHeight: 1.6 }}>
+                Choose a model below and start your conversation
+              </p>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
+                {["Explain quantum computing", "Write a React hook", "Summarize the news"].map((s) => (
+                  <button key={s} className="pill-btn" onClick={() => { setUserMessage(s); inputRef.current?.focus(); }}>{s}</button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div key={i} className="msg-enter" style={{ display: "flex", flexDirection: "column", alignItems: msg.type === "user" ? "flex-end" : "flex-start" }}>
+
+                {/* avatar row */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+                  {msg.type === "ai" && (
+                    <>
+                      {(() => {
+                        const m = MODEL_OPTIONS.find(o => o.id === msg.model);
+                        return m ? (
+                          <img src={m.logo} alt={m.label} style={{ width: 18, height: 18, borderRadius: "4px" }} />
+                        ) : null;
+                      })()}
+                      <span style={{ fontSize: "0.72rem", color: tokens.muted, fontWeight: 500 }}>
+                        {MODEL_OPTIONS.find(o => o.id === msg.model)?.label ?? msg.model}
+                      </span>
+                    </>
+                  )}
+                  {msg.type === "user" && (
+                    <span style={{ fontSize: "0.72rem", color: tokens.muted, fontWeight: 500 }}>You</span>
+                  )}
+                </div>
+
+                {/* bubble */}
+                <div style={{
+                  maxWidth: "min(680px, 88%)",
+                  padding: msg.content === "thinking" ? "10px 14px" : "14px 18px",
+                  borderRadius: msg.type === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  background: msg.type === "user" ? tokens.userBubble : tokens.aiBubble,
+                  color: msg.type === "user" ? tokens.userText : tokens.aiText,
+                  border: `1px solid ${msg.type === "user" ? "transparent" : tokens.border}`,
+                  boxShadow: msg.type === "ai" ? `0 1px 4px rgba(0,0,0,0.06)` : "none",
+                  fontSize: "0.9rem",
+                  lineHeight: "1.65",
+                  transition: "background 0.3s",
+                }}>
+                  {msg.type === "user"
+                    ? <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</span>
+                    : renderMessageContent(msg.content, true, i)
+                  }
+                </div>
+
+                {/* progress bar under last AI message while loading */}
+                {isLoading && msg.type === "ai" && i === messages.length - 1 && (
+                  <div style={{ width: "min(680px, 88%)", marginTop: "6px" }}>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* scroll to bottom */}
+        {showScrollToBottomButton && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "-8px", position: "relative", zIndex: 10 }}>
+            <button
+              onClick={scrollToBottom}
+              style={{
+                display: "flex", alignItems: "center", gap: "4px",
+                padding: "5px 12px", borderRadius: "100px",
+                background: tokens.surface, border: `1px solid ${tokens.border}`,
+                color: tokens.text, fontSize: "0.75rem", cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              }}
+            >
+              <ArrowDown size={12} /> Scroll to bottom
+            </button>
+          </div>
+        )}
+
+        {/* ── INPUT AREA ── */}
+        {networkStatus === "offline" ? (
+          <div style={{
+            margin: "12px 20px 16px",
+            padding: "12px 18px",
+            borderRadius: "14px",
+            background: isDark ? "rgba(232,100,58,0.12)" : "rgba(232,100,58,0.08)",
+            border: `1px solid rgba(232,100,58,0.3)`,
+            display: "flex", alignItems: "center", gap: "10px",
+            fontSize: "0.85rem", color: tokens.accent,
+          }}>
+            <WifiOff size={16} />
+            You're offline. Please check your internet connection.
+          </div>
+        ) : (
+          <div style={{
+            margin: "8px 20px 16px",
+            background: tokens.inputBg,
+            border: `1px solid ${tokens.border}`,
+            borderRadius: "16px",
+            padding: "12px 14px 10px",
+            transition: "border-color 0.2s",
+          }}
+            onFocus={() => {}}
+          >
+            {/* model + input row */}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+
+              {/* model selector */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <button
+                  className="pill-btn"
+                  onClick={() => setModelDropdownOpen(o => !o)}
+                  style={{ paddingRight: "10px" }}
+                >
+                  {currentModel && <img src={currentModel.logo} alt={currentModel.label} style={{ width: 14, height: 14 }} />}
+                  {currentModel?.label}
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.5 }}>
+                    <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {modelDropdownOpen && (
+                  <>
+                    <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setModelDropdownOpen(false)} />
+                    <div className="model-dropdown">
+                      {MODEL_OPTIONS.map((m) => (
+                        <div
+                          key={m.id}
+                          className={`model-opt ${modelType === m.id ? "active" : ""}`}
+                          onClick={() => { setModelType(m.id); setModelDropdownOpen(false); }}
+                        >
+                          <img src={m.logo} alt={m.label} style={{ width: 18, height: 18 }} />
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{m.label}</div>
+                            <div style={{ fontSize: "0.72rem", opacity: 0.5 }}>{m.sublabel}</div>
+                          </div>
+                          {modelType === m.id && <Check size={14} style={{ marginLeft: "auto", color: tokens.accent }} />}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* text input */}
               <textarea
                 ref={inputRef}
+                className="chat-input"
                 value={userMessage}
                 onChange={(e) => setUserMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
-                rows="1"
+                placeholder="Message ChatMorph…"
+                rows={1}
                 disabled={isLoading}
-                className="w-full bg-slate-700 text-white rounded-lg pl-4 pr-12 py-2 min-h-[40px] max-h-[200px] resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-400 transition-all duration-200"
-                style={{
-                  overflow: 'hidden',
-                  lineHeight: '1.5'
-                }}
               />
 
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={!userMessage.trim() || isLoading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                <Send className="h-4 w-4 text-white" />
+              {/* send */}
+              <button className="send-btn" onClick={handleSubmit} disabled={!userMessage.trim() || isLoading}>
+                <Send size={16} />
               </button>
             </div>
-          </div>
 
-          {/* Character Count */}
-          <div className="px-4 py-1 text-right">
-            <span className="text-xs text-slate-400">
-              {userMessage.length} characters |
-              {userMessage.trim().split(/\s+/).filter(Boolean).length} words |
-              {userMessage.trim().split(/(?<=[.!?])\s+/).filter(Boolean).length} sentences |
-              {userMessage.trim().split(/\n/).filter(Boolean).length} lines
-            </span>
+            {/* stats row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", paddingTop: "8px", borderTop: `1px solid ${tokens.border}` }}>
+              <span style={{ fontSize: "0.7rem", color: tokens.muted }}>
+                {window.innerWidth >= 640 ? "Enter to send · Shift+Enter for new line" : "Tap send to submit"}
+              </span>
+              <span style={{ fontSize: "0.7rem", color: tokens.muted, fontFamily: "'DM Mono', monospace" }}>
+                {userMessage.length}c · {userMessage.trim() ? userMessage.trim().split(/\s+/).length : 0}w
+              </span>
+            </div>
           </div>
-        </form> :
-        <div role="alert" className="flex items-center justify-center alert alert-error sticky bottom-0 mx-4 -mb-3 shadow-xl">
-          <WifiOff className="h-6 w-6 shrink-0 stroke-current" />
-          <span>You are offline. Please check your internet connection.</span>
+        )}
+      </div>
+
+      {/* ── INFO MODAL ── */}
+      {showInfo && (
+        <div className="modal-backdrop" onClick={() => setShowInfo(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <img src={Logo} alt="ChatMorph" style={{ width: 36, height: 36, borderRadius: "10px" }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "1rem" }}>ChatMorph</div>
+                  <div style={{ fontSize: "0.72rem", color: tokens.muted }}>Multi-model AI chat</div>
+                </div>
+              </div>
+              <button className="icon-btn" onClick={() => setShowInfo(false)}><X size={15} /></button>
+            </div>
+
+            <p style={{ fontSize: "0.875rem", color: tokens.muted, lineHeight: 1.7, marginBottom: "20px" }}>
+              ChatMorph connects you with top-tier AI models including Mistral and Gemini. Ask questions, explore ideas, and have engaging conversations with AI models tailored to your needs.
+            </p>
+
+            <div style={{ fontSize: "0.8rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: tokens.muted, marginBottom: "12px" }}>
+              How to use
+            </div>
+            {[
+              ["Choose a model", "Select Mistral or Gemini from the model picker in the input area."],
+              ["Type your message", "Enter your question or prompt. Press Enter to send (desktop) or tap the send button."],
+              ["Explore responses", "AI responses support rich Markdown, code highlighting, and tables."],
+              ["Continue chatting", "Your conversation history is maintained across messages for context."],
+            ].map(([title, desc]) => (
+              <div key={title} style={{ display: "flex", gap: "12px", marginBottom: "14px" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: tokens.accent, flexShrink: 0, marginTop: "7px" }} />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "2px" }}>{title}</div>
+                  <div style={{ fontSize: "0.82rem", color: tokens.muted, lineHeight: 1.5 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ marginTop: "20px", padding: "14px", borderRadius: "10px", background: tokens.accentMuted, border: `1px solid rgba(232,100,58,0.15)`, fontSize: "0.8rem", color: tokens.muted }}>
+              Made with ❤️ by Mohammad Inteshar Alam (MrXiwlev) · 2024 ·{" "}
+              <a href="https://inteshar.github.io/" target="_blank" rel="noreferrer" style={{ color: tokens.accent }}>
+                inteshar.github.io
+              </a>
+            </div>
+          </div>
         </div>
-      }
-    </div>
+      )}
+    </>
   );
 };
 
