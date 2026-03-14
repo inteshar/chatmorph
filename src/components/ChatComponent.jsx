@@ -614,6 +614,7 @@ const ChatComponent = () => {
             <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
 
               {/* model selector */}
+              {/* model selector 
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <button
                   className="pill-btn"
@@ -649,6 +650,7 @@ const ChatComponent = () => {
                   </>
                 )}
               </div>
+              */}
 
               {/* text input */}
               <textarea
